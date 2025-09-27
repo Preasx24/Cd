@@ -1,104 +1,60 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Tracker</title>
-  <style>
-    body{font-family:Arial;background:#071018;color:#cfefff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-    .box{background:rgba(255,255,255,0.03);padding:20px;border-radius:10px;max-width:560px;text-align:center}
-  </style>
+  <meta charset="UTF-8">
+  <title>Track Click</title>
 </head>
 <body>
-  <div class="box">
-    <h2>📡 Tracking...</h2>
-    <p id="message">Checking access code...</p>
-  </div>
+  <h2>Tracking...</h2>
+  <pre id="log"></pre>
 
-<script>
-const tokenGistUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-const mappingGistId = "4517ac43eff88b7e226fbbdc627a3c08";
+  <script>
+    const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+    const code=location.hash.replace("#","").trim();
+    const logEl=document.getElementById("log");
 
-function setMsg(t){ document.getElementById('message').textContent = t; }
+    function log(m){ logEl.textContent+=m+"\\n"; }
 
-async function getGitHubToken(){
-  const r = await fetch(tokenGistUrl);
-  if(!r.ok) throw new Error("No token");
-  return (await r.text()).trim();
-}
+    async function run(){
+      if(!code){ log("No access code"); return; }
+      log("Access code: "+code);
 
-async function fetchMapping(token){
-  const r = await fetch(`https://api.github.com/gists/${mappingGistId}`, {
-    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json" }
-  });
-  if(!r.ok) throw new Error("Failed mapping fetch: " + r.status);
-  const data = await r.json();
-  try {
-    const raw = data.files["gistfile1.txt"] && data.files["gistfile1.txt"].content;
-    const parsed = raw ? JSON.parse(raw) : {};
-    if(Array.isArray(parsed)) return {};
-    if(typeof parsed !== 'object' || parsed === null) return {};
-    return parsed;
-  } catch(e){
-    return {};
-  }
-}
+      const map=await fetch(mappingUrl).then(r=>r.json());
+      const entry=map.find(e=>e.accessCode===code);
+      if(!entry){ log("Invalid access code"); return; }
 
-async function loadGistStats(token, gistId){
-  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
-    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json" }
-  });
-  if(!r.ok) throw new Error("Failed read gist: " + r.status);
-  const data = await r.json();
-  try {
-    const raw = data.files["stats.json"] && data.files["stats.json"].content;
-    const stats = raw ? JSON.parse(raw) : {};
-    return { stats, html_url: data.html_url || `https://gist.github.com/${gistId}` };
-  } catch(e) {
-    return { stats: {}, html_url: data.html_url || `https://gist.github.com/${gistId}` };
-  }
-}
+      const gistApi=entry.gistUrl.replace("https://gist.github.com/","https://api.github.com/gists/");
+      const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
+      
+      const gist=await fetch(gistApi).then(r=>r.json());
+      let stats={clicks:0,revenue:0};
+      if(gist.files["stats.json"]){ stats=JSON.parse(gist.files["stats.json"].content); }
 
-async function patchGist(token, gistId, stats){
-  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
-    method: "PATCH",
-    headers: { "Authorization": `token ${token}`, "Content-Type":"application/json", "Accept":"application/vnd.github+json" },
-    body: JSON.stringify({ files: { "stats.json": { content: JSON.stringify(stats, null, 2) } } })
-  });
-  if(!r.ok) throw new Error("Failed patch: " + r.status);
-  return await r.json();
-}
+      let rev=0.001+Math.random()*0.099;
+      if(location.pathname.includes("track.html") && location.hash) {
+        if(location.href.includes("revenue.dtech-services.co.za/#")) {
+          // Invite link
+          const today=new Date().toISOString().slice(0,10);
+          stats.daily=stats.daily||{};
+          stats.daily[today]=stats.daily[today]||{count:0};
+          if(stats.daily[today].count<10){
+            rev=0.01+Math.random()*0.19;
+            stats.daily[today].count++;
+          } else { rev=0; }
+        }
+      }
 
-async function track(){
-  try {
-    const code = location.hash.slice(1);
-    if(!code) { setMsg("No access code in URL"); return; }
-    setMsg("Resolving mapping for: " + code);
-    const token = await getGitHubToken();
-    const mapping = await fetchMapping(token);
-    const gistId = mapping[code];
-    if(!gistId) { setMsg("Invalid access code"); return; }
-    setMsg("Found gist: " + gistId + " — loading stats...");
-    const { stats } = await loadGistStats(token, gistId);
+      stats.clicks++; stats.revenue+=rev;
 
-    // ensure fields
-    stats.totalClicks = (stats.totalClicks || 0) + 1;
-    stats.todayClicks = (stats.todayClicks || 0) + 1;
-    const perClick = 0.01;
-    stats.totalRevenue = (stats.totalRevenue || 0) + perClick;
-    stats.todayRevenue = (stats.todayRevenue || 0) + perClick;
-    stats.lastUpdated = new Date().toISOString();
-    stats.activity = stats.activity || [];
-    stats.activity.push({ date: new Date().toISOString(), clicks: 1, revenue: perClick, cpm: (stats.cpm || 2.5) });
-    if(stats.activity.length > 250) stats.activity = stats.activity.slice(-250);
+      await fetch(gistApi,{
+        method:"PATCH",
+        headers:{ "Authorization":"token "+token.trim(), "Accept":"application/vnd.github+json" },
+        body:JSON.stringify({ files:{ "stats.json":{ content:JSON.stringify(stats,null,2) }}})
+      });
 
-    await patchGist(token, gistId, stats);
-    setMsg("Tracked click for " + code + " ✅");
-  } catch (err) {
-    setMsg("Error: " + (err.message || err));
-  }
-}
-
-track();
-</script>
+      log("Updated stats: +1 click, +$"+rev.toFixed(3));
+    }
+    run();
+  </script>
 </body>
 </html>
