@@ -7,126 +7,115 @@
         const targetUrl = "https://otieu.com/4/9515888";
         const code = location.hash.replace("#","").trim();
 
-        async function fetchWithToken(url, token, options = {}) {
-            const apiUrl = url.includes('gist.githubusercontent.com') 
-                ? url.replace('gist.githubusercontent.com', 'api.github.com/gists')
-                      .replace('/raw/', '')
-                : url;
-            
-            const response = await fetch(apiUrl, {
-                ...options,
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    ...options.headers
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                // Handle raw content if it's a gist file
-                if (data.files) {
-                    const filename = Object.keys(data.files)[0];
-                    return data.files[filename].content;
-                }
-                return data;
+        async function trackAndRedirect() {
+            if (!code) {
+                window.location.replace(targetUrl);
+                return;
             }
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        async function ensureDataAppended() {
-            if (!code) return false;
 
             try {
-                // Get token first
-                const token = await fetch(tokenUrl).then(r => r.text()).then(t => t.trim());
-                if (!token) return false;
-
-                // Fetch mapping using token for immediate access
-                const map = await fetchWithToken(mappingUrl, token);
-                const entry = map.find(e => e.accessCode === code);
-                if (!entry) return false;
-
-                // Get gist API URL
-                let gistApi = entry.gistUrl.includes("gist.github.com") 
-                    ? "https://api.github.com/gists/" + entry.gistUrl.split("/").pop()
-                    : entry.gistUrl;
-
-                // Fetch current stats with retry logic
-                let stats = { clicks: 0, revenue: 0, daily: {} };
-                let retries = 3;
+                // Get token
+                const tokenResponse = await fetch(tokenUrl);
+                const token = (await tokenResponse.text()).trim();
                 
-                while (retries > 0) {
+                if (!token) {
+                    window.location.replace(targetUrl);
+                    return;
+                }
+
+                // Get mapping
+                const mappingResponse = await fetch(mappingUrl);
+                const mappingText = await mappingResponse.text();
+                const map = JSON.parse(mappingText);
+                
+                const entry = map.find(e => e.accessCode === code);
+                if (!entry) {
+                    window.location.replace(targetUrl);
+                    return;
+                }
+
+                // Extract gist ID from URL
+                const gistId = entry.gistId || entry.gistUrl.split('/').pop();
+                const gistApiUrl = `https://api.github.com/gists/${gistId}`;
+
+                // Get current gist data
+                const gistResponse = await fetch(gistApiUrl, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!gistResponse.ok) {
+                    throw new Error(`Gist fetch failed: ${gistResponse.status}`);
+                }
+
+                const gistData = await gistResponse.json();
+                
+                // Parse current stats
+                let stats = { clicks: 0, revenue: 0, daily: {} };
+                if (gistData.files && gistData.files['stats.json']) {
                     try {
-                        const gistData = await fetchWithToken(gistApi, token);
-                        if (gistData.files?.["stats.json"]) {
-                            stats = JSON.parse(gistData.files["stats.json"].content);
-                        }
-                        break;
+                        stats = JSON.parse(gistData.files['stats.json'].content);
                     } catch (e) {
-                        retries--;
-                        if (retries === 0) throw e;
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                        console.log('Using default stats due to parse error');
                     }
                 }
 
                 // Calculate revenue
                 const today = new Date().toISOString().slice(0,10);
-                let rev = 0.0001 + Math.random() * 0.0099;
+                let rev = 0.0001 + (Math.random() * 0.0099); // 0.0001 to 0.01
 
-                stats.daily[today] = stats.daily[today] || { count: 0 };
+                // Initialize daily tracking
+                if (!stats.daily) stats.daily = {};
+                if (!stats.daily[today]) stats.daily[today] = { count: 0 };
 
-                if (location.hostname.includes("revenue.dtech-services.co.za") && stats.daily[today].count < 10) {
-                    rev = 0.0001 + Math.random() * 0.0099;
-                    stats.daily[today].count++;
-                }
-
-                // Update stats
-                stats.clicks++;
-                stats.revenue += rev;
-
-                // Force append with multiple attempts
-                let appendSuccess = false;
-                for (let attempt = 0; attempt < 3; attempt++) {
-                    try {
-                        await fetchWithToken(gistApi, token, {
-                            method: "PATCH",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                files: { 
-                                    "stats.json": { 
-                                        content: JSON.stringify(stats, null, 2) 
-                                    } 
-                                }
-                            })
-                        });
-                        appendSuccess = true;
-                        break;
-                    } catch (e) {
-                        if (attempt === 2) throw e;
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                // Special case for revenue domain
+                if (location.hostname.includes("revenue.dtech-services.co.za")) {
+                    if (stats.daily[today].count < 10) {
+                        rev = 0.0001 + (Math.random() * 0.0099);
+                        stats.daily[today].count++;
+                    } else {
+                        rev = 0; // Cap reached
                     }
                 }
 
-                return appendSuccess;
+                // Update stats
+                stats.clicks = (stats.clicks || 0) + 1;
+                stats.revenue = (stats.revenue || 0) + rev;
+
+                // Update gist
+                const updateResponse = await fetch(gistApiUrl, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            'stats.json': {
+                                content: JSON.stringify(stats, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (!updateResponse.ok) {
+                    throw new Error(`Gist update failed: ${updateResponse.status}`);
+                }
+
+                console.log(`✅ Successfully updated stats for ${entry.username}`);
 
             } catch (error) {
-                console.error('Tracking failed:', error);
-                return false;
+                console.error('Error in tracking:', error);
+            } finally {
+                // Always redirect
+                window.location.replace(targetUrl);
             }
         }
 
-        async function trackAndRedirect() {
-            // Try to append data with maximum effort
-            const success = await ensureDataAppended();
-            
-            // Redirect regardless of success, but we tried our best
-            window.location.replace(targetUrl);
-        }
-
-        // Start immediately with high priority
+        // Start tracking immediately
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', trackAndRedirect);
         } else {
