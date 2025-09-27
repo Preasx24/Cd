@@ -199,32 +199,6 @@ body {
   color: var(--success);
 }
 
-.setup-note {
-  background: rgba(245, 158, 11, 0.1);
-  border-left: 4px solid var(--warning);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-}
-
-.setup-note strong {
-  color: var(--warning);
-}
-
-.ready-note {
-  background: rgba(16, 185, 129, 0.1);
-  border-left: 4px solid var(--success);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-}
-
-.ready-note strong {
-  color: var(--success);
-}
-
 .url-box {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
@@ -262,17 +236,6 @@ body {
 
 .copy-btn.copied {
   background: var(--success);
-}
-
-.copy-btn:disabled {
-  background: var(--text-muted);
-  cursor: not-allowed;
-  transform: none;
-}
-
-.copy-btn:disabled:hover {
-  background: var(--text-muted);
-  transform: none;
 }
 
 .action-buttons {
@@ -315,17 +278,6 @@ body {
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn:disabled:hover {
-  transform: none;
-  box-shadow: none;
 }
 
 .daily-stats {
@@ -393,60 +345,6 @@ body {
   margin: 0 auto 10px;
 }
 
-.setup-status {
-  text-align: center;
-  padding: 20px;
-  background: rgba(245, 158, 11, 0.05);
-  border-radius: 12px;
-  margin: 15px 0;
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-.setup-status h3 {
-  color: var(--warning);
-  margin-bottom: 10px;
-}
-
-.setup-status p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.ready-status {
-  text-align: center;
-  padding: 20px;
-  background: rgba(16, 185, 129, 0.05);
-  border-radius: 12px;
-  margin: 15px 0;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.ready-status h3 {
-  color: var(--success);
-  margin-bottom: 10px;
-}
-
-.ready-status p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.progress-bar {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  margin: 15px 0;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--warning), var(--secondary));
-  border-radius: 3px;
-  width: 0%;
-  transition: width 0.5s ease;
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -509,20 +407,6 @@ body {
     </div>
     <p id="welcome" style="margin-bottom: 15px;"></p>
 
-    <div id="setupStatus" class="setup-status" style="display: none;">
-      <h3>🔄 Setting up your account</h3>
-      <p>Your account is being configured. This usually takes about 3 minutes.</p>
-      <div class="progress-bar">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
-      <p id="setupMessage">Please wait while we set everything up...</p>
-    </div>
-
-    <div id="readyStatus" class="ready-status" style="display: none;">
-      <h3>✅ Your links are ready!</h3>
-      <p>Your account setup is complete. You can now start sharing your links and earning revenue!</p>
-    </div>
-
     <div id="statsDetails" class="loading">
       <div class="spinner"></div>
       <p>Loading your statistics...</p>
@@ -541,34 +425,26 @@ body {
       <h2>Your Sharing URLs</h2>
     </div>
 
-    <div class="sharing-note" id="sharingNote" style="display: none;">
-      <strong>✅ Ready to share!</strong> Share these URLs on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn!
-    </div>
-
-    <div class="setup-note" id="setupNote">
-      <strong>⏳ Account setup in progress</strong> Please wait 3 minutes for your account to be fully set up before sharing your links. Your URLs will be ready soon!
-    </div>
-
-    <div class="ready-note" id="readyNote" style="display: none;">
-      <strong>✅ Links are ready!</strong> Your account setup is complete. You can now start sharing your links and earning revenue!
+    <div class="sharing-note">
+      <strong>Share these URLs</strong> on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn!
     </div>
 
     <div class="url-container">
       <div class="url-box">
         <div class="url-label">Custom Track URL</div>
         <div id="trackUrl" class="url-text"></div>
-        <button class="copy-btn" id="trackCopyBtn" data-url="trackUrl" disabled>Copy</button>
+        <button class="copy-btn" data-url="trackUrl">Copy</button>
       </div>
 
       <div class="url-box">
         <div class="url-label">Invite URL (max 10 loads/day)</div>
         <div id="inviteUrl" class="url-text"></div>
-        <button class="copy-btn" id="inviteCopyBtn" data-url="inviteUrl" data-invite="true" disabled>Copy</button>
+        <button class="copy-btn" data-url="inviteUrl" data-invite="true">Copy</button>
       </div>
     </div>
 
     <div class="action-buttons">
-      <a href="out.html" class="btn btn-primary" id="withdrawBtn" style="display: none;">Withdraw Earnings</a>
+      <a href="out.html" class="btn btn-primary">Withdraw Earnings</a>
       <button class="btn btn-secondary" id="refreshBtn">Refresh Stats</button>
     </div>
   </div>
@@ -603,72 +479,9 @@ const inviteUrl = `https://revenue.dtech-services.co.za/#${user.accessCode}`;
 document.getElementById('trackUrl').textContent = trackUrl;
 document.getElementById('inviteUrl').textContent = inviteUrl;
 
-// Track account creation time
-if (!user.accountCreatedAt) {
-  user.accountCreatedAt = new Date().toISOString();
-  localStorage.setItem("adRevenueUser", JSON.stringify(user));
-}
-
-// Check if account is still setting up (3 minutes now)
-function isAccountSettingUp() {
-  const accountCreatedAt = new Date(user.accountCreatedAt);
-  const now = new Date();
-  const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
-  
-  return minutesSinceCreation < 3; // Show setup status for first 3 minutes
-}
-
-// Update setup progress
-function updateSetupProgress() {
-  const accountCreatedAt = new Date(user.accountCreatedAt);
-  const now = new Date();
-  const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
-  const progressPercent = Math.min((minutesSinceCreation / 3) * 100, 100);
-  
-  document.getElementById('progressFill').style.width = `${progressPercent}%`;
-  
-  if (minutesSinceCreation < 1) {
-    document.getElementById('setupMessage').textContent = 'Initializing your account...';
-  } else if (minutesSinceCreation < 2) {
-    document.getElementById('setupMessage').textContent = 'Setting up tracking systems...';
-  } else if (minutesSinceCreation < 3) {
-    document.getElementById('setupMessage').textContent = 'Finalizing setup... Almost ready!';
-  } else {
-    document.getElementById('setupMessage').textContent = 'Setup complete! Your account is ready.';
-  }
-}
-
-// Enable sharing features when account is ready
-function enableSharingFeatures() {
-  document.getElementById('sharingNote').style.display = 'block';
-  document.getElementById('setupNote').style.display = 'none';
-  document.getElementById('readyNote').style.display = 'block';
-  document.getElementById('withdrawBtn').style.display = 'inline-block';
-  document.getElementById('setupStatus').style.display = 'none';
-  document.getElementById('readyStatus').style.display = 'block';
-  
-  // Enable copy buttons
-  document.getElementById('trackCopyBtn').disabled = false;
-  document.getElementById('inviteCopyBtn').disabled = false;
-}
-
-// Check if user entry exists in mapping
-async function checkUserEntryExists() {
-  try {
-    const map = await fetch(mappingUrl).then(r => r.json());
-    const entry = map.find(e => e.accessCode === user.accessCode);
-    return !!entry; // Returns true if entry exists
-  } catch (error) {
-    console.error('Error checking user entry:', error);
-    return false;
-  }
-}
-
 // Copy functionality
 document.querySelectorAll('.copy-btn').forEach(button => {
   button.addEventListener('click', function() {
-    if (this.disabled) return;
-    
     const urlId = this.getAttribute('data-url');
     const isInvite = this.getAttribute('data-invite') === 'true';
     
@@ -776,34 +589,6 @@ function autoScrollToGraph() {
 
 async function loadStats() {
   const statsContainer = document.getElementById('statsDetails');
-  const setupStatus = document.getElementById('setupStatus');
-  
-  // Update setup progress
-  updateSetupProgress();
-  
-  // Check if account is still setting up
-  if (isAccountSettingUp()) {
-    setupStatus.style.display = 'block';
-    statsContainer.style.display = 'none';
-    document.getElementById('graphContainer').style.display = 'none';
-    document.getElementById('readyStatus').style.display = 'none';
-    
-    // Show loading message after a delay to indicate we're checking stats
-    setTimeout(() => {
-      statsContainer.innerHTML = `
-        <div class="loading">
-          <div class="spinner"></div>
-          <p>Checking your account status...</p>
-        </div>
-      `;
-      statsContainer.style.display = 'block';
-    }, 2000);
-  } else {
-    setupStatus.style.display = 'none';
-    statsContainer.style.display = 'block';
-    enableSharingFeatures();
-  }
-
   statsContainer.innerHTML = `
     <div class="loading">
       <div class="spinner"></div>
@@ -868,15 +653,6 @@ async function loadStats() {
       }
     }
 
-    // Check if we have real data (not just zeros) or if user entry exists
-    const hasRealData = stats.clicks > 0 || stats.revenue > 0 || Object.keys(stats.daily).length > 0;
-    
-    // If account setup time has passed OR we have real data OR user entry exists, enable features
-    if (!isAccountSettingUp() || hasRealData) {
-      enableSharingFeatures();
-      setupStatus.style.display = 'none';
-    }
-
     // Build HTML display with stats side by side
     let html = `
       <div class="stats-container">
@@ -932,36 +708,8 @@ async function loadStats() {
   }
 }
 
-// Check account status regularly
-async function checkAccountStatus() {
-  if (isAccountSettingUp()) {
-    updateSetupProgress();
-    
-    // Check if user entry exists in mapping (regardless of time)
-    const userEntryExists = await checkUserEntryExists();
-    if (userEntryExists) {
-      console.log('User entry found in mapping! Account setup complete.');
-      enableSharingFeatures();
-      return true; // Stop further checks
-    }
-  } else {
-    enableSharingFeatures();
-    return true; // Stop further checks
-  }
-  return false; // Continue checking
-}
-
 // Load stats on page load
 loadStats();
-
-// Check account status every 20 seconds
-const statusCheckInterval = setInterval(async () => {
-  const shouldStop = await checkAccountStatus();
-  if (shouldStop) {
-    clearInterval(statusCheckInterval);
-    console.log('Stopped account status checks - setup complete');
-  }
-}, 20000); // Check every 20 seconds
 </script>
 </body>
 </html>
