@@ -1,60 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Track Click</title>
+  <meta charset="UTF-8">
+  <title>Track Click</title>
+  <style>
+    body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+    pre { background:#000; padding:12px; border-radius:8px; }
+  </style>
 </head>
 <body>
-<h2>Tracking...</h2>
-<pre id="log"></pre>
+  <h2>Tracking...</h2>
+  <pre id="log"></pre>
 
-<script>
-const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
-const code=location.hash.replace("#","").trim();
-const logEl=document.getElementById("log");
-function log(m){ logEl.textContent+=m+"\n"; }
+  <script>
+    const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+    const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
+    const code = location.hash.replace("#","").trim();
+    const logEl = document.getElementById("log");
 
-async function run(){
-  if(!code){ log("No access code"); return; }
-  log("Access code: "+code);
+    function log(msg){ logEl.textContent += msg + "\n"; }
 
-  // Fetch mapping
-  const map=await fetch(mappingUrl).then(r=>r.json());
-  const entry=map.find(e=>e.accessCode===code);
-  if(!entry){ log("Invalid access code"); return; }
+    async function run(){
+      if(!code){ log("❌ No access code found in URL"); return; }
+      log("🔑 Access code: " + code);
 
-  const gistApi=entry.gistUrl.replace("https://gist.github.com/","https://api.github.com/gists/");
-  const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
+      // Fetch token
+      const token = (await fetch(tokenUrl).then(r => r.text())).trim();
+      if(!token){ log("❌ Failed to fetch token"); return; }
 
-  // Fetch existing stats
-  const gist=await fetch(gistApi).then(r=>r.json());
-  let stats={clicks:0,revenue:0};
-  if(gist.files["stats.json"]){ stats=JSON.parse(gist.files["stats.json"].content); }
+      // Fetch mapping
+      let map = await fetch(mappingUrl).then(r => r.json());
+      let entry = map.find(e => e.accessCode === code);
 
-  // Calculate revenue
-  let rev=0.001+Math.random()*0.099;
-  if(location.href.includes("revenue.dtech-services.co.za/#")){
-    const today=new Date().toISOString().slice(0,10);
-    stats.daily=stats.daily||{};
-    stats.daily[today]=stats.daily[today]||{count:0};
-    if(stats.daily[today].count<10){ rev=0.01+Math.random()*0.19; stats.daily[today].count++; } else rev=0;
-  }
+      if(!entry){
+        log("❌ Invalid access code (not found in mapping)");
+        return;
+      }
 
-  stats.clicks++; stats.revenue+=rev;
+      // Normalize gist API URL
+      let gistApi;
+      if(entry.gistUrl.includes("gist.github.com")){
+        const gistId = entry.gistUrl.split("/").pop();
+        gistApi = "https://api.github.com/gists/" + gistId;
+      } else if(entry.gistUrl.includes("api.github.com/gists/")){
+        gistApi = entry.gistUrl;
+      } else {
+        log("❌ Invalid gist URL in mapping");
+        return;
+      }
 
-  // Save updated stats back to gist
-  await fetch(gistApi,{
-    method:"PATCH",
-    headers:{
-      "Authorization":"token "+token.trim(),
-      "Accept":"application/vnd.github+json"
-    },
-    body:JSON.stringify({ files:{ "stats.json":{ content:JSON.stringify(stats,null,2) }}})
-  });
+      // Fetch current stats
+      const gist = await fetch(gistApi).then(r => r.json());
+      let stats = { clicks: 0, revenue: 0, daily: {} };
+      if(gist.files && gist.files["stats.json"]){
+        try {
+          stats = JSON.parse(gist.files["stats.json"].content);
+        } catch(e){
+          log("⚠️ Could not parse existing stats, resetting...");
+        }
+      }
 
-  log("Updated stats: +1 click, +$"+rev.toFixed(3));
-}
-run();
-</script>
+      // Calculate revenue
+      let rev = 0.001 + Math.random()*0.099; // default small revenue
+      const today = new Date().toISOString().slice(0,10);
+
+      stats.daily = stats.daily || {};
+      stats.daily[today] = stats.daily[today] || { count:0 };
+
+      // Special case: invite link (track.html#code)
+      if(location.hostname.includes("revenue.dtech-services.co.za")){
+        if(stats.daily[today].count < 10){
+          rev = 0.01 + Math.random()*0.19; // higher reward
+          stats.daily[today].count++;
+        } else {
+          rev = 0; // cap reached
+        }
+      }
+
+      // Update stats
+      stats.clicks++;
+      stats.revenue += rev;
+
+      // Push stats to gist
+      await fetch(gistApi, {
+        method:"PATCH",
+        headers:{
+          "Authorization":"token " + token,
+          "Accept":"application/vnd.github+json"
+        },
+        body: JSON.stringify({
+          files: {
+            "stats.json": { content: JSON.stringify(stats,null,2) }
+          }
+        })
+      });
+
+      log(`✅ Updated stats for ${entry.username || "user"}: +1 click, +$${rev.toFixed(3)}`);
+    }
+
+    run();
+  </script>
 </body>
 </html>
