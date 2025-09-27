@@ -37,7 +37,7 @@ body {
 }
 
 .container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -117,6 +117,68 @@ body {
 .stat-label {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.graph-container {
+  margin: 25px 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  height: 300px;
+}
+
+.graph-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.graph-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 100%;
+  padding: 20px 0;
+}
+
+.bar {
+  width: 30px;
+  background: linear-gradient(to top, var(--primary), var(--secondary));
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 0.5s ease;
+}
+
+.bar-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bar-value {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.graph-title {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .url-container {
@@ -277,13 +339,32 @@ body {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .card {
     padding: 20px 15px;
+  }
+  
+  .graph-container {
+    height: 250px;
+    padding: 15px;
+  }
+  
+  .bar {
+    width: 20px;
+  }
+  
+  .bar-label {
+    font-size: 0.7rem;
+    bottom: -20px;
+  }
+  
+  .bar-value {
+    font-size: 0.7rem;
+    top: -20px;
   }
 }
 </style>
@@ -294,40 +375,46 @@ body {
     <h1>AdRevenuePro Dashboard</h1>
     <p>Track your earnings and manage your links</p>
   </div>
-  
+
   <div class="card">
     <div class="card-header">
       <div class="icon">📊</div>
       <h2>Your Performance Stats</h2>
     </div>
     <p id="welcome" style="margin-bottom: 20px;"></p>
-    
+
     <div id="statsDetails" class="loading">
       <div class="spinner"></div>
       <p>Loading your statistics...</p>
     </div>
+    
+    <!-- Graph Container -->
+    <div class="graph-container" id="graphContainer" style="display: none;">
+      <div class="graph-title">Daily Clicks Overview</div>
+      <div class="graph-bar" id="graphBar"></div>
+    </div>
   </div>
-  
+
   <div class="card">
     <div class="card-header">
       <div class="icon">🔗</div>
       <h2>Your Sharing URLs</h2>
     </div>
-    
+
     <div class="url-container">
       <div class="url-box">
         <div class="url-label">Custom Track URL</div>
         <div id="trackUrl" class="url-text"></div>
         <button class="copy-btn" data-url="trackUrl">Copy</button>
       </div>
-      
+
       <div class="url-box">
         <div class="url-label">Invite URL (max 10 loads/day)</div>
         <div id="inviteUrl" class="url-text"></div>
         <button class="copy-btn" data-url="inviteUrl" data-invite="true">Copy</button>
       </div>
     </div>
-    
+
     <div class="action-buttons">
       <a href="out.html" class="btn btn-primary">Withdraw Earnings</a>
       <button class="btn btn-secondary" id="refreshBtn">Refresh Stats</button>
@@ -358,38 +445,40 @@ if (!user.accessCode) {
 document.getElementById('welcome').textContent = `Welcome, ${user.username}!`;
 
 // Set URLs
-document.getElementById('trackUrl').textContent = `https://revenue.dtech-services.co.za/track.html#${user.accessCode}`;
-document.getElementById('inviteUrl').textContent = `https://revenue.dtech-services.co.za/#${user.accessCode}`;
+const trackUrl = `https://revenue.dtech-services.co.za/track.html#${user.accessCode}`;
+const inviteUrl = `https://revenue.dtech-services.co.za/#${user.accessCode}`;
+
+document.getElementById('trackUrl').textContent = trackUrl;
+document.getElementById('inviteUrl').textContent = inviteUrl;
 
 // Copy functionality
 document.querySelectorAll('.copy-btn').forEach(button => {
   button.addEventListener('click', function() {
     const urlId = this.getAttribute('data-url');
     const isInvite = this.getAttribute('data-invite') === 'true';
-    const urlText = document.getElementById(urlId).textContent;
     
-    let textToCopy = urlText;
-    
+    let textToCopy = document.getElementById(urlId).textContent;
+
     if (isInvite) {
-      textToCopy = `${urlText}\n\nJoin me on AdRevenuePro - a user-friendly ad system that provides access to ad monetization through direct advertising. It's an easy way to generate revenue by sharing ad links and earning cash as people view and click those links!`;
+      textToCopy = `Custom Track URL: ${trackUrl}\nInvite URL: ${inviteUrl}\n\nJoin me on AdRevenuePro - a user-friendly ad system that provides access to ad monetization through direct advertising. It's an easy way to generate revenue by sharing ad links and earning cash as people view and click those links!`;
     }
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(textToCopy).then(() => {
       // Show toast notification
       const toast = document.getElementById('toast');
       if (isInvite) {
-        toast.textContent = "Invite URL and message copied!";
+        toast.textContent = "Both URLs and invitation message copied!";
       } else {
         toast.textContent = "URL copied to clipboard!";
       }
       toast.classList.add('show');
-      
+
       // Change button text temporarily
       const originalText = this.textContent;
       this.textContent = 'Copied!';
       this.classList.add('copied');
-      
+
       setTimeout(() => {
         toast.classList.remove('show');
         this.textContent = originalText;
@@ -404,6 +493,55 @@ document.querySelectorAll('.copy-btn').forEach(button => {
 // Refresh button functionality
 document.getElementById('refreshBtn').addEventListener('click', loadStats);
 
+// Function to create the graph
+function createGraph(dailyStats) {
+  const graphContainer = document.getElementById('graphContainer');
+  const graphBar = document.getElementById('graphBar');
+  
+  // Clear previous graph
+  graphBar.innerHTML = '';
+  
+  // If no daily stats, show placeholder
+  if (!dailyStats || Object.keys(dailyStats).length === 0) {
+    graphBar.innerHTML = '<div class="graph-placeholder">No data available for graph</div>';
+    graphContainer.style.display = 'block';
+    return;
+  }
+  
+  // Get the last 7 days of data (or all if less than 7)
+  const dates = Object.keys(dailyStats).sort((a, b) => new Date(b) - new Date(a)).slice(0, 7).reverse();
+  const values = dates.map(date => dailyStats[date].count);
+  
+  // Calculate max value for scaling
+  const maxValue = Math.max(...values, 10); // Ensure at least 10 for scaling
+  
+  // Create bars
+  dates.forEach((date, index) => {
+    const barHeight = (values[index] / maxValue) * 80 + 10; // 80% of container height + 10% minimum
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = `${barHeight}%`;
+    
+    const barValue = document.createElement('div');
+    barValue.className = 'bar-value';
+    barValue.textContent = values[index];
+    
+    const barLabel = document.createElement('div');
+    barLabel.className = 'bar-label';
+    
+    // Format date to be more readable (e.g., "Jan 15")
+    const dateObj = new Date(date);
+    barLabel.textContent = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    bar.appendChild(barValue);
+    bar.appendChild(barLabel);
+    graphBar.appendChild(bar);
+  });
+  
+  // Show the graph
+  graphContainer.style.display = 'block';
+}
+
 async function loadStats() {
   const statsContainer = document.getElementById('statsDetails');
   statsContainer.innerHTML = `
@@ -412,7 +550,7 @@ async function loadStats() {
       <p>Loading your statistics...</p>
     </div>
   `;
-  
+
   try {
     const map = await fetch(mappingUrl).then(r => r.json());
     let entry = map.find(e => e.accessCode === user.accessCode);
@@ -475,7 +613,7 @@ async function loadStats() {
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-label">Total Clicks</div>
-          <div class="stat-value">${stats.clicks}</div>
+          <div class="stat-value">${stats.clicks.toLocaleString()}</div>
           <div class="stat-desc">All-time click count</div>
         </div>
         <div class="stat-box">
@@ -486,16 +624,19 @@ async function loadStats() {
       </div>
     `;
 
+    // Create the graph
+    createGraph(stats.daily);
+
     if (stats.daily && Object.keys(stats.daily).length) {
       html += `
         <div class="daily-stats">
           <h3>📈 Daily Performance</h3>
           <div class="daily-list">
       `;
-      
+
       // Sort dates in descending order (newest first)
       const sortedDates = Object.keys(stats.daily).sort((a, b) => new Date(b) - new Date(a));
-      
+
       for (const day of sortedDates) {
         html += `
           <div class="daily-item">
@@ -504,7 +645,7 @@ async function loadStats() {
           </div>
         `;
       }
-      
+
       html += `</div></div>`;
     }
 
