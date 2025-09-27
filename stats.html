@@ -212,6 +212,19 @@ body {
   color: var(--warning);
 }
 
+.ready-note {
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 4px solid var(--success);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.ready-note strong {
+  color: var(--success);
+}
+
 .url-box {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
@@ -399,6 +412,25 @@ body {
   font-size: 0.9rem;
 }
 
+.ready-status {
+  text-align: center;
+  padding: 20px;
+  background: rgba(16, 185, 129, 0.05);
+  border-radius: 12px;
+  margin: 15px 0;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.ready-status h3 {
+  color: var(--success);
+  margin-bottom: 10px;
+}
+
+.ready-status p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 .progress-bar {
   height: 6px;
   background: rgba(255, 255, 255, 0.1);
@@ -479,11 +511,16 @@ body {
 
     <div id="setupStatus" class="setup-status" style="display: none;">
       <h3>🔄 Setting up your account</h3>
-      <p>Your account is being configured. This usually takes about 5 minutes.</p>
+      <p>Your account is being configured. This usually takes about 3 minutes.</p>
       <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
       </div>
       <p id="setupMessage">Please wait while we set everything up...</p>
+    </div>
+
+    <div id="readyStatus" class="ready-status" style="display: none;">
+      <h3>✅ Your links are ready!</h3>
+      <p>Your account setup is complete. You can now start sharing your links and earning revenue!</p>
     </div>
 
     <div id="statsDetails" class="loading">
@@ -509,7 +546,11 @@ body {
     </div>
 
     <div class="setup-note" id="setupNote">
-      <strong>⏳ Account setup in progress</strong> Please wait 5 minutes for your account to be fully set up before sharing your links. Your URLs will be ready soon!
+      <strong>⏳ Account setup in progress</strong> Please wait 3 minutes for your account to be fully set up before sharing your links. Your URLs will be ready soon!
+    </div>
+
+    <div class="ready-note" id="readyNote" style="display: none;">
+      <strong>✅ Links are ready!</strong> Your account setup is complete. You can now start sharing your links and earning revenue!
     </div>
 
     <div class="url-container">
@@ -568,13 +609,13 @@ if (!user.accountCreatedAt) {
   localStorage.setItem("adRevenueUser", JSON.stringify(user));
 }
 
-// Check if account is still setting up
+// Check if account is still setting up (3 minutes now)
 function isAccountSettingUp() {
   const accountCreatedAt = new Date(user.accountCreatedAt);
   const now = new Date();
   const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
   
-  return minutesSinceCreation < 5; // Show setup status for first 5 minutes
+  return minutesSinceCreation < 3; // Show setup status for first 3 minutes
 }
 
 // Update setup progress
@@ -582,15 +623,15 @@ function updateSetupProgress() {
   const accountCreatedAt = new Date(user.accountCreatedAt);
   const now = new Date();
   const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
-  const progressPercent = Math.min((minutesSinceCreation / 5) * 100, 100);
+  const progressPercent = Math.min((minutesSinceCreation / 3) * 100, 100);
   
   document.getElementById('progressFill').style.width = `${progressPercent}%`;
   
   if (minutesSinceCreation < 1) {
     document.getElementById('setupMessage').textContent = 'Initializing your account...';
-  } else if (minutesSinceCreation < 3) {
+  } else if (minutesSinceCreation < 2) {
     document.getElementById('setupMessage').textContent = 'Setting up tracking systems...';
-  } else if (minutesSinceCreation < 5) {
+  } else if (minutesSinceCreation < 3) {
     document.getElementById('setupMessage').textContent = 'Finalizing setup... Almost ready!';
   } else {
     document.getElementById('setupMessage').textContent = 'Setup complete! Your account is ready.';
@@ -601,11 +642,26 @@ function updateSetupProgress() {
 function enableSharingFeatures() {
   document.getElementById('sharingNote').style.display = 'block';
   document.getElementById('setupNote').style.display = 'none';
+  document.getElementById('readyNote').style.display = 'block';
   document.getElementById('withdrawBtn').style.display = 'inline-block';
+  document.getElementById('setupStatus').style.display = 'none';
+  document.getElementById('readyStatus').style.display = 'block';
   
   // Enable copy buttons
   document.getElementById('trackCopyBtn').disabled = false;
   document.getElementById('inviteCopyBtn').disabled = false;
+}
+
+// Check if user entry exists in mapping
+async function checkUserEntryExists() {
+  try {
+    const map = await fetch(mappingUrl).then(r => r.json());
+    const entry = map.find(e => e.accessCode === user.accessCode);
+    return !!entry; // Returns true if entry exists
+  } catch (error) {
+    console.error('Error checking user entry:', error);
+    return false;
+  }
 }
 
 // Copy functionality
@@ -730,6 +786,7 @@ async function loadStats() {
     setupStatus.style.display = 'block';
     statsContainer.style.display = 'none';
     document.getElementById('graphContainer').style.display = 'none';
+    document.getElementById('readyStatus').style.display = 'none';
     
     // Show loading message after a delay to indicate we're checking stats
     setTimeout(() => {
@@ -811,10 +868,10 @@ async function loadStats() {
       }
     }
 
-    // Check if we have real data (not just zeros)
+    // Check if we have real data (not just zeros) or if user entry exists
     const hasRealData = stats.clicks > 0 || stats.revenue > 0 || Object.keys(stats.daily).length > 0;
     
-    // If account setup time has passed OR we have real data, enable features
+    // If account setup time has passed OR we have real data OR user entry exists, enable features
     if (!isAccountSettingUp() || hasRealData) {
       enableSharingFeatures();
       setupStatus.style.display = 'none';
@@ -875,18 +932,36 @@ async function loadStats() {
   }
 }
 
+// Check account status regularly
+async function checkAccountStatus() {
+  if (isAccountSettingUp()) {
+    updateSetupProgress();
+    
+    // Check if user entry exists in mapping (regardless of time)
+    const userEntryExists = await checkUserEntryExists();
+    if (userEntryExists) {
+      console.log('User entry found in mapping! Account setup complete.');
+      enableSharingFeatures();
+      return true; // Stop further checks
+    }
+  } else {
+    enableSharingFeatures();
+    return true; // Stop further checks
+  }
+  return false; // Continue checking
+}
+
 // Load stats on page load
 loadStats();
 
-// Update progress bar every 30 seconds while account is setting up
-setInterval(() => {
-  if (isAccountSettingUp()) {
-    updateSetupProgress();
-  } else {
-    enableSharingFeatures();
-    document.getElementById('setupStatus').style.display = 'none';
+// Check account status every 20 seconds
+const statusCheckInterval = setInterval(async () => {
+  const shouldStop = await checkAccountStatus();
+  if (shouldStop) {
+    clearInterval(statusCheckInterval);
+    console.log('Stopped account status checks - setup complete');
   }
-}, 30000);
+}, 20000); // Check every 20 seconds
 </script>
 </body>
 </html>
