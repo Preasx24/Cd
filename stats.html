@@ -1,116 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>AdRevenuePro - Stats Dashboard</title>
+  <meta charset="utf-8" />
+  <title>AdRevenuePro - Stats Dashboard (fixed mapping)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { background: #0f2027; color: #fff; font-family: Arial, sans-serif; padding: 2rem; }
-    .card { background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; }
-    h2 { color: #4facfe; }
-    input, button { padding: 0.75rem; border-radius: 6px; border: none; margin-top: 0.5rem; width: 100%; }
-    input { background: #1e1e1e; color: #fff; }
-    button { background: #4facfe; color: #fff; font-weight: bold; cursor: pointer; }
-    button:hover { background: #00f2fe; }
-    pre { background: #111; padding: 1rem; border-radius: 6px; color: #0f0; max-height: 150px; overflow-y: auto; }
+    body { background: #0f2027; color: #fff; font-family: Arial, sans-serif; padding: 24px; }
+    .card { background: rgba(255,255,255,0.03); padding: 18px; border-radius: 10px; margin-bottom: 16px; }
+    input, button { padding: 10px; border-radius: 6px; border: none; }
+    input { width: 100%; margin-bottom: 10px; background:#161b23; color:#fff; }
+    button { background:#4facfe; color:#000; font-weight:700; cursor:pointer; }
+    pre { background:#071218; padding:10px; border-radius:6px; color:#bfefff; white-space:pre-wrap; }
   </style>
 </head>
 <body>
   <div class="card" id="authCard">
-    <h2>🔐 Login</h2>
-    <input id="accessCode" placeholder="Enter Access Code" />
-    <button onclick="login()">Login</button>
+    <h2>Login (access code)</h2>
+    <input id="accessCode" placeholder="Enter 8-char access code" maxlength="16" />
+    <button id="loginBtn">Login</button>
   </div>
 
   <div class="card" id="dashboard" style="display:none">
-    <h2>📊 Dashboard</h2>
-    <p id="welcome"></p>
-    <p>Your Ad URL:</p>
-    <pre id="adUrl"></pre>
-    <h3>Stats</h3>
-    <div id="statsBox">Loading...</div>
-    <h3>Console Log</h3>
-    <pre id="console"></pre>
-    <button onclick="refreshStats()">Refresh</button>
-    <button onclick="logout()">Logout</button>
+    <h2>Dashboard</h2>
+    <div><strong id="welcome"></strong></div>
+    <div style="margin-top:8px">
+      Ad URL: <pre id="adUrl"></pre>
+    </div>
+
+    <div style="margin-top:12px">
+      <button id="incBtn">Simulate a Click (update gist)</button>
+      <button id="refreshBtn">Refresh Stats</button>
+    </div>
+
+    <h3 style="margin-top:14px">Summary</h3>
+    <pre id="statsBox">—</pre>
+
+    <h3>Activity (last 14)</h3>
+    <canvas id="performanceChart" height="140"></canvas>
+
+    <h3 style="margin-top:12px">Console</h3>
+    <pre id="consoleLog" style="max-height:160px;overflow:auto"></pre>
+
+    <div style="margin-top:10px">
+      <button id="logoutBtn">Logout</button>
+    </div>
   </div>
 
-  <script>
-    const tokenGistUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-    const mappingGistId = "4517ac43eff88b7e226fbbdc627a3c08";
+<script>
+/*
+  Updated logic:
+   - fetch token from your token gist (as requested)
+   - robust mapping fetch/parse
+   - check mapping BEFORE creating a new gist
+   - after create -> re-fetch mapping and merge/resolve race; delete duplicate if needed
+   - store current gistId in localStorage to avoid extra lookups
+*/
 
-    function log(msg) {
-      const consoleBox = document.getElementById('console');
-      consoleBox.textContent += msg + "\n";
-      consoleBox.scrollTop = consoleBox.scrollHeight;
-    }
+const tokenGistUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
+const mappingGistId = "4517ac43eff88b7e226fbbdc627a3c08"; // your "hardcore" mapping gist
+const SITE_DOMAIN = "https://revenue.dtech-services.co.za";
 
-    async function getGitHubToken() {
-      const res = await fetch(tokenGistUrl);
-      return (await res.text()).trim();
-    }
+function log(msg){
+  const el = document.getElementById('consoleLog');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
 
-    async function fetchMapping(token) {
-      const res = await fetch(`https://api.github.com/gists/${mappingGistId}`, {
-        headers: { "Authorization": `token ${token}` }
-      });
-      const data = await res.json();
-      return JSON.parse(data.files["gistfile1.txt"].content || "{}");
-    }
+async function getGitHubToken(){
+  log("Fetching token gist...");
+  const r = await fetch(tokenGistUrl);
+  if(!r.ok) throw new Error("Could not fetch token gist");
+  const t = (await r.text()).trim();
+  if(!t) throw new Error("Token gist empty");
+  log("Token acquired.");
+  return t;
+}
 
-    async function saveMapping(token, mapping) {
-      await fetch(`https://api.github.com/gists/${mappingGistId}`, {
-        method: "PATCH",
-        headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" },
-        body: JSON.stringify({ files: { "gistfile1.txt": { content: JSON.stringify(mapping, null, 2) } } })
-      });
-    }
+async function fetchMapping(token){
+  log("Fetching mapping gist...");
+  const r = await fetch(`https://api.github.com/gists/${mappingGistId}`, {
+    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json" }
+  });
+  if(!r.ok) {
+    log("Failed to fetch mapping gist: " + r.status);
+    return {};
+  }
+  const data = await r.json();
+  try {
+    const raw = data.files["gistfile1.txt"] && data.files["gistfile1.txt"].content;
+    if(!raw) return {};
+    const parsed = JSON.parse(raw);
+    // canonicalize: if it's an array or not an object, convert to {}
+    if(Array.isArray(parsed)) return {};
+    if(typeof parsed !== 'object' || parsed === null) return {};
+    return parsed;
+  } catch (e) {
+    log("Mapping parse error, using empty mapping.");
+    return {};
+  }
+}
 
-    async function login() {
-      const code = document.getElementById("accessCode").value.trim();
-      if (!code) return alert("Enter code");
-      localStorage.setItem("userCode", code);
-      document.getElementById("authCard").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("welcome").textContent = `Welcome, ${code}`;
-      document.getElementById("adUrl").textContent = `https://revenue.dtech-services.co.za/track.html#${code}`;
-      await refreshStats();
-    }
+async function saveMapping(token, mapping){
+  log("Saving mapping gist...");
+  const r = await fetch(`https://api.github.com/gists/${mappingGistId}`, {
+    method: "PATCH",
+    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json", "Content-Type":"application/json" },
+    body: JSON.stringify({ files: { "gistfile1.txt": { content: JSON.stringify(mapping, null, 2) } } })
+  });
+  if(!r.ok) {
+    const txt = await r.text();
+    throw new Error("Failed saving mapping: " + r.status + " " + txt);
+  }
+  log("Mapping gist updated.");
+}
 
-    async function refreshStats() {
-      const code = localStorage.getItem("userCode");
-      const token = await getGitHubToken();
-      let mapping = await fetchMapping(token);
-      let gistId = mapping[code];
-      if (!gistId) {
-        log("Creating new gist for " + code);
-        const res = await fetch("https://api.github.com/gists", {
-          method: "POST",
-          headers: { "Authorization": `token ${token}` },
-          body: JSON.stringify({
-            description: `Stats for ${code}`,
-            public: false,
-            files: { "stats.json": { content: JSON.stringify({ totalClicks:0, todayClicks:0, totalRevenue:0, todayRevenue:0 }, null, 2) } }
-          })
-        });
-        const data = await res.json();
-        gistId = data.id;
-        mapping[code] = gistId;
-        await saveMapping(token, mapping);
+async function createUserGist(token, accessCode, initialStats){
+  log("Creating new user gist for " + accessCode);
+  const r = await fetch("https://api.github.com/gists", {
+    method: "POST",
+    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json", "Content-Type":"application/json" },
+    body: JSON.stringify({
+      description: `AdRevenue stats for ${accessCode}`,
+      public: false,
+      files: { "stats.json": { content: JSON.stringify(initialStats, null, 2) } }
+    })
+  });
+  const data = await r.json();
+  if(!data || !data.id) {
+    throw new Error("Create gist failed: " + JSON.stringify(data));
+  }
+  log("Created gist: " + data.html_url);
+  return { id: data.id, url: data.html_url };
+}
+
+async function patchGist(token, gistId, stats){
+  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: "PATCH",
+    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json", "Content-Type":"application/json" },
+    body: JSON.stringify({ files: { "stats.json": { content: JSON.stringify(stats, null, 2) } } })
+  });
+  const data = await r.json();
+  if(!r.ok) throw new Error("Failed patch gist: " + JSON.stringify(data));
+  return data;
+}
+
+async function deleteGist(token, gistId){
+  log("Deleting duplicate gist: " + gistId);
+  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: "DELETE",
+    headers: { "Authorization": `token ${token}` }
+  });
+  if(!r.ok) log("Delete returned " + r.status);
+  else log("Duplicate gist deleted.");
+}
+
+// load gist stats by gistId
+async function loadGistStats(token, gistId){
+  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+    headers: { "Authorization": `token ${token}`, "Accept":"application/vnd.github+json" }
+  });
+  if(!r.ok) throw new Error("Failed to read user gist: " + r.status);
+  const data = await r.json();
+  let stats = {};
+  try {
+    const raw = data.files["stats.json"] && data.files["stats.json"].content;
+    stats = raw ? JSON.parse(raw) : {};
+  } catch(e) { stats = {}; }
+  return { stats, html_url: data.html_url || (`https://gist.github.com/${gistId}`) };
+}
+
+/* --- UI logic --- */
+let current = { accessCode: null, gistId: null, stats: null };
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const code = (document.getElementById('accessCode').value || "").trim();
+  if(!code) return alert("Enter access code");
+  try {
+    const token = await getGitHubToken();
+    // try to get mapping
+    let mapping = await fetchMapping(token);
+    // canonicalize mapping object
+    if(!mapping || typeof mapping !== "object") mapping = {};
+
+    // if mapping already has code -> use existing
+    if(mapping[code]) {
+      log("Mapping found for code. Using existing gist: " + mapping[code]);
+      current.accessCode = code;
+      current.gistId = mapping[code];
+    } else {
+      // Prevent race: re-check mapping again then create if still absent
+      // Re-fetch mapping fresh
+      mapping = await fetchMapping(token);
+      if(mapping[code]) {
+        current.accessCode = code;
+        current.gistId = mapping[code];
+        log("Mapping created by someone else in between. Using: " + current.gistId);
+      } else {
+        // create new gist
+        const initialStats = {
+          totalClicks: 0,
+          todayClicks: 0,
+          totalRevenue: 0,
+          todayRevenue: 0,
+          activity: [],
+          lastUpdated: new Date().toISOString()
+        };
+        const created = await createUserGist(token, code, initialStats);
+        // after create re-fetch mapping to detect race:
+        const freshMapping = await fetchMapping(token);
+        if(freshMapping[code]) {
+          // race: somebody else created mapping concurrently -> cleanup created gist and use the existing one
+          const existing = freshMapping[code];
+          log("Race detected: mapping created by another process. Existing gist: " + existing);
+          // delete the newly created gist to avoid duplicate clutter
+          await deleteGist(token, created.id);
+          current.accessCode = code;
+          current.gistId = existing;
+        } else {
+          // no race: update mapping with our created gist
+          freshMapping[code] = created.id;
+          await saveMapping(token, freshMapping);
+          current.accessCode = code;
+          current.gistId = created.id;
+          log("Mapping saved linking " + code + " -> " + created.id);
+        }
       }
-      const gistRes = await fetch(`https://api.github.com/gists/${gistId}`, {
-        headers: { "Authorization": `token ${token}` }
-      });
-      const gistData = await gistRes.json();
-      const stats = JSON.parse(gistData.files["stats.json"].content);
-      document.getElementById("statsBox").textContent = JSON.stringify(stats, null, 2);
-      log("Loaded stats for " + code);
     }
 
-    function logout() {
-      localStorage.removeItem("userCode");
-      document.getElementById("dashboard").style.display = "none";
-      document.getElementById("authCard").style.display = "block";
+    // store and show dashboard
+    localStorage.setItem('ad_user', JSON.stringify({accessCode: current.accessCode, gistId: current.gistId}));
+    showDashboard();
+    await refreshStats(); // load actual stats
+  } catch (err) {
+    log("Login error: " + err.message);
+    alert("Login error: " + err.message);
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('ad_user');
+  location.reload();
+});
+
+document.getElementById('incBtn').addEventListener('click', async () => {
+  // convenience: simulate a click and write to gist
+  await updateStats({ hits: 1 });
+});
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  await refreshStats();
+});
+
+function showDashboard() {
+  const saved = JSON.parse(localStorage.getItem('ad_user') || "{}");
+  if(!saved || !saved.accessCode) return;
+  document.getElementById('authCard').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('welcome').textContent = `Access code: ${saved.accessCode}`;
+  document.getElementById('adUrl').textContent = `${SITE_DOMAIN}/track.html#${saved.accessCode}`;
+  log("Dashboard ready for " + saved.accessCode);
+}
+
+/* refreshStats: read user gist and display */
+async function refreshStats(){
+  try {
+    const cached = JSON.parse(localStorage.getItem('ad_user') || "{}");
+    if(!cached || !cached.gistId) throw new Error("No gist id stored");
+    const token = await getGitHubToken();
+    const { stats, html_url } = await loadGistStats(token, cached.gistId);
+    current.stats = stats;
+    current.gistId = cached.gistId;
+    // safety: ensure fields exist
+    stats.totalClicks = stats.totalClicks || 0;
+    stats.todayClicks = stats.todayClicks || 0;
+    stats.totalRevenue = stats.totalRevenue || 0;
+    stats.todayRevenue = stats.todayRevenue || 0;
+    stats.activity = stats.activity || [];
+    stats.lastUpdated = stats.lastUpdated || new Date().toISOString();
+
+    document.getElementById('statsBox').textContent = JSON.stringify({
+      totalClicks: stats.totalClicks,
+      totalRevenue: stats.totalRevenue,
+      todayClicks: stats.todayClicks,
+      todayRevenue: stats.todayRevenue,
+      lastUpdated: stats.lastUpdated
+    }, null, 2);
+
+    drawChart(stats.activity || []);
+    log("Stats loaded from gist: " + html_url);
+  } catch (e) {
+    log("Refresh error: " + e.message);
+  }
+}
+
+async function updateStats({ hits = 1 } = {}){
+  try {
+    const saved = JSON.parse(localStorage.getItem('ad_user') || "{}");
+    if(!saved || !saved.gistId) throw new Error("Not logged in");
+    const token = await getGitHubToken();
+    // load current
+    const { stats } = await loadGistStats(token, saved.gistId);
+    // normalize
+    stats.totalClicks = (stats.totalClicks || 0) + hits;
+    stats.todayClicks = (stats.todayClicks || 0) + hits;
+    const revenuePerClick = 0.01;
+    stats.totalRevenue = (stats.totalRevenue || 0) + (hits * revenuePerClick);
+    stats.todayRevenue = (stats.todayRevenue || 0) + (hits * revenuePerClick);
+    stats.lastUpdated = new Date().toISOString();
+    // add activity entry
+    stats.activity = stats.activity || [];
+    stats.activity.push({ date: new Date().toISOString(), clicks: hits, revenue: hits * revenuePerClick, cpm: (stats.cpm || 2.5) });
+    // keep only last 250 entries to avoid giant gists
+    if (stats.activity.length > 250) stats.activity = stats.activity.slice(-250);
+    // patch gist
+    const patch = await patchGist(token, saved.gistId, stats);
+    log("Gist patched: " + (patch.html_url || saved.gistId));
+    // update UI
+    await refreshStats();
+  } catch (e) {
+    log("Update error: " + e.message);
+  }
+}
+
+/* chart helper */
+let chartInstance = null;
+function drawChart(activity) {
+  const ctx = document.getElementById('performanceChart').getContext('2d');
+  const slice = activity.slice(-14);
+  const labels = slice.map(a => new Date(a.date).toLocaleDateString());
+  const clicks = slice.map(a => a.clicks);
+  const revenue = slice.map(a => a.revenue);
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Clicks', data: clicks, borderColor:'#4facfe', yAxisID:'y' },
+        { label: 'Revenue', data: revenue, borderColor:'#00f2fe', yAxisID:'y1' }
+      ]
+    },
+    options: {
+      scales: {
+        y: { position: 'left', title: { display: true, text: 'Clicks' } },
+        y1: { position:'right', title: { display:true, text:'Revenue ($)' }, grid: { drawOnChartArea:false } }
+      }
     }
-  </script>
+  });
+}
+
+/* on load: restore session if available */
+window.addEventListener('load', () => {
+  const saved = JSON.parse(localStorage.getItem('ad_user') || "{}");
+  if(saved && saved.accessCode) {
+    showDashboard();
+    // try to load stats automatically (best-effort)
+    refreshStats().catch(()=>{/*ignore*/});
+  }
+});
+</script>
 </body>
 </html>
