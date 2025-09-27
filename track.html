@@ -1,60 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Track Click</title>
+<meta charset="UTF-8">
+<title>Track Click</title>
 </head>
 <body>
-  <h2>Tracking...</h2>
-  <pre id="log"></pre>
+<h2>Tracking...</h2>
+<pre id="log"></pre>
 
-  <script>
-    const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
-    const code=location.hash.replace("#","").trim();
-    const logEl=document.getElementById("log");
+<script>
+const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+const code=location.hash.replace("#","").trim();
+const logEl=document.getElementById("log");
+function log(m){ logEl.textContent+=m+"\n"; }
 
-    function log(m){ logEl.textContent+=m+"\\n"; }
+async function run(){
+  if(!code){ log("No access code"); return; }
+  log("Access code: "+code);
 
-    async function run(){
-      if(!code){ log("No access code"); return; }
-      log("Access code: "+code);
+  // Fetch mapping
+  const map=await fetch(mappingUrl).then(r=>r.json());
+  const entry=map.find(e=>e.accessCode===code);
+  if(!entry){ log("Invalid access code"); return; }
 
-      const map=await fetch(mappingUrl).then(r=>r.json());
-      const entry=map.find(e=>e.accessCode===code);
-      if(!entry){ log("Invalid access code"); return; }
+  const gistApi=entry.gistUrl.replace("https://gist.github.com/","https://api.github.com/gists/");
+  const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
 
-      const gistApi=entry.gistUrl.replace("https://gist.github.com/","https://api.github.com/gists/");
-      const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
-      
-      const gist=await fetch(gistApi).then(r=>r.json());
-      let stats={clicks:0,revenue:0};
-      if(gist.files["stats.json"]){ stats=JSON.parse(gist.files["stats.json"].content); }
+  // Fetch existing stats
+  const gist=await fetch(gistApi).then(r=>r.json());
+  let stats={clicks:0,revenue:0};
+  if(gist.files["stats.json"]){ stats=JSON.parse(gist.files["stats.json"].content); }
 
-      let rev=0.001+Math.random()*0.099;
-      if(location.pathname.includes("track.html") && location.hash) {
-        if(location.href.includes("revenue.dtech-services.co.za/#")) {
-          // Invite link
-          const today=new Date().toISOString().slice(0,10);
-          stats.daily=stats.daily||{};
-          stats.daily[today]=stats.daily[today]||{count:0};
-          if(stats.daily[today].count<10){
-            rev=0.01+Math.random()*0.19;
-            stats.daily[today].count++;
-          } else { rev=0; }
-        }
-      }
+  // Calculate revenue
+  let rev=0.001+Math.random()*0.099;
+  if(location.href.includes("revenue.dtech-services.co.za/#")){
+    const today=new Date().toISOString().slice(0,10);
+    stats.daily=stats.daily||{};
+    stats.daily[today]=stats.daily[today]||{count:0};
+    if(stats.daily[today].count<10){ rev=0.01+Math.random()*0.19; stats.daily[today].count++; } else rev=0;
+  }
 
-      stats.clicks++; stats.revenue+=rev;
+  stats.clicks++; stats.revenue+=rev;
 
-      await fetch(gistApi,{
-        method:"PATCH",
-        headers:{ "Authorization":"token "+token.trim(), "Accept":"application/vnd.github+json" },
-        body:JSON.stringify({ files:{ "stats.json":{ content:JSON.stringify(stats,null,2) }}})
-      });
+  // Save updated stats back to gist
+  await fetch(gistApi,{
+    method:"PATCH",
+    headers:{
+      "Authorization":"token "+token.trim(),
+      "Accept":"application/vnd.github+json"
+    },
+    body:JSON.stringify({ files:{ "stats.json":{ content:JSON.stringify(stats,null,2) }}})
+  });
 
-      log("Updated stats: +1 click, +$"+rev.toFixed(3));
-    }
-    run();
-  </script>
+  log("Updated stats: +1 click, +$"+rev.toFixed(3));
+}
+run();
+</script>
 </body>
 </html>
