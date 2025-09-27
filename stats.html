@@ -329,6 +329,10 @@ body {
   opacity: 1;
 }
 
+.toast.error {
+  background: var(--error);
+}
+
 .loading {
   text-align: center;
   padding: 20px;
@@ -343,6 +347,21 @@ body {
   height: 30px;
   animation: spin 1s linear infinite;
   margin: 0 auto 10px;
+}
+
+.retry-button {
+  background: var(--warning);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.retry-button:hover {
+  background: #e68a00;
 }
 
 @keyframes spin {
@@ -426,7 +445,7 @@ body {
     </div>
 
     <div class="sharing-note">
-      <strong>Share these URLs</strong> on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn
+      <strong>Share these URLs</strong> on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn!
     </div>
 
     <div class="url-container">
@@ -453,6 +472,7 @@ body {
 <div class="toast" id="toast">Copied to clipboard!</div>
 
 <script>
+// Configuration
 const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
 const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
 const user = JSON.parse(localStorage.getItem("adRevenueUser") || "{}");
@@ -488,7 +508,7 @@ document.querySelectorAll('.copy-btn').forEach(button => {
     let textToCopy = document.getElementById(urlId).textContent;
 
     if (isInvite) {
-      textToCopy = `Custom Track URL: ${trackUrl}\nGet started: ${inviteUrl}\n\nJoin me on AdRevenuePro - a user-friendly ad system that provides access to ad monetization through direct advertising. It's an easy way to generate revenue by creating and sharing ad links and earning cash as people view and click those links!`;
+      textToCopy = `Custom Track URL: ${trackUrl}\nInvite URL: ${inviteUrl}\n\nJoin me on AdRevenuePro - a user-friendly ad system that provides access to ad monetization through direct advertising. It's an easy way to generate revenue by sharing ad links and earning cash as people view and click those links!`;
     }
 
     // Copy to clipboard
@@ -587,6 +607,60 @@ function autoScrollToGraph() {
   }
 }
 
+// Enhanced function to ensure data is appended quickly
+async function ensureDataAppended(entry, token) {
+  let retries = 3;
+  
+  while (retries > 0) {
+    try {
+      // Try to fetch the gist using the token for authentication
+      const gistApi = entry.gistUrl.includes("gist.github.com") 
+        ? `https://api.github.com/gists/${entry.gistUrl.split("/").pop()}`
+        : entry.gistUrl;
+      
+      const response = await fetch(gistApi, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github+json"
+        }
+      });
+      
+      if (response.ok) {
+        const gist = await response.json();
+        
+        // Check if stats.json exists and has content
+        if (gist.files && gist.files["stats.json"]) {
+          try {
+            const stats = JSON.parse(gist.files["stats.json"].content);
+            // If we have valid stats, return them
+            if (stats && typeof stats.clicks !== 'undefined') {
+              return stats;
+            }
+          } catch (e) {
+            console.warn("Error parsing stats.json, will retry");
+          }
+        }
+        
+        // If we don't have valid stats, wait and retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        retries--;
+      } else {
+        console.warn(`Failed to fetch gist: ${response.status}, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        retries--;
+      }
+    } catch (error) {
+      console.warn("Error fetching gist, retrying...", error);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      retries--;
+    }
+  }
+  
+  // If we've exhausted retries, return default stats
+  return { clicks: 0, revenue: 0, daily: {} };
+}
+
+// Enhanced loadStats function with better error handling and retry logic
 async function loadStats() {
   const statsContainer = document.getElementById('statsDetails');
   statsContainer.innerHTML = `
@@ -597,12 +671,30 @@ async function loadStats() {
   `;
 
   try {
-    const map = await fetch(mappingUrl).then(r => r.json());
+    // First, get the token
+    const tokenResponse = await fetch(tokenUrl);
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to fetch token: ${tokenResponse.status}`);
+    }
+    const token = (await tokenResponse.text()).trim();
+    
+    // Fetch mapping using the token for better reliability
+    const mappingResponse = await fetch(mappingUrl, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+    
+    if (!mappingResponse.ok) {
+      throw new Error(`Failed to fetch mapping: ${mappingResponse.status}`);
+    }
+    
+    const map = await mappingResponse.json();
     let entry = map.find(e => e.accessCode === user.accessCode);
 
     // If no entry, create a new gist and update mapping
     if (!entry) {
-      const token = (await fetch(tokenUrl).then(r => r.text())).trim();
       const newGist = await fetch("https://api.github.com/gists", {
         method: "POST",
         headers: {
@@ -616,11 +708,20 @@ async function loadStats() {
         })
       }).then(r => r.json());
 
-      entry = {accessCode: user.accessCode, gistUrl: newGist.html_url, username: user.username};
+      if (!newGist.id) {
+        throw new Error("Failed to create new gist");
+      }
+
+      entry = {
+        accessCode: user.accessCode, 
+        gistUrl: newGist.html_url, 
+        gistApi: newGist.url,
+        username: user.username
+      };
       map.push(entry);
 
-      // Update main mapping gist
-      await fetch("https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08", {
+      // Update main mapping gist with token authentication
+      const updateResponse = await fetch("https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08", {
         method: "PATCH",
         headers: {
           "Authorization": "token " + token,
@@ -628,73 +729,48 @@ async function loadStats() {
         },
         body: JSON.stringify({files: {"gistfile1.txt": {content: JSON.stringify(map, null, 2)}}})
       });
-    }
-
-    // Normalize gist API URL
-    let gistApi;
-    if (entry.gistUrl.includes("gist.github.com")) {
-      const gistId = entry.gistUrl.split("/").pop();
-      gistApi = "https://api.github.com/gists/" + gistId;
-    } else if (entry.gistUrl.includes("api.github.com/gists/")) {
-      gistApi = entry.gistUrl;
+      
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update mapping: ${updateResponse.status}`);
+      }
+      
+      // Ensure data is properly appended before proceeding
+      const stats = await ensureDataAppended(entry, token);
+      
+      // Update UI with the stats
+      updateUI(stats);
     } else {
-      statsContainer.innerHTML = "<div style='color: var(--error); text-align: center; padding: 20px;'>❌ Invalid gist URL configuration</div>";
-      return;
-    }
-
-    // Fetch stats
-    const gist = await fetch(gistApi).then(r => r.json());
-    let stats = {clicks: 0, revenue: 0, daily: {}};
-    if (gist.files && gist.files["stats.json"]) {
-      try { 
-        stats = JSON.parse(gist.files["stats.json"].content); 
-      } catch(e) { 
-        console.warn("Invalid stats.json, resetting"); 
+      // Entry exists, fetch stats with token authentication
+      const gistApi = entry.gistApi || 
+        (entry.gistUrl.includes("gist.github.com") 
+          ? `https://api.github.com/gists/${entry.gistUrl.split("/").pop()}`
+          : entry.gistUrl);
+      
+      const gistResponse = await fetch(gistApi, {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github+json"
+        }
+      });
+      
+      if (!gistResponse.ok) {
+        throw new Error(`Failed to fetch gist: ${gistResponse.status}`);
       }
-    }
-
-    // Build HTML display with stats side by side
-    let html = `
-      <div class="stats-container">
-        <div class="stat-box">
-          <div class="stat-label">Total Clicks</div>
-          <div class="stat-value">${stats.clicks.toLocaleString()}</div>
-          <div class="stat-desc">All-time click count</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">Total Revenue</div>
-          <div class="stat-value">$${stats.revenue.toFixed(3)}</div>
-          <div class="stat-desc">Your earnings</div>
-        </div>
-      </div>
-    `;
-
-    // Create the graph
-    createGraph(stats.daily);
-
-    if (stats.daily && Object.keys(stats.daily).length) {
-      html += `
-        <div class="daily-stats">
-          <h3>📈 Daily Performance</h3>
-          <div class="daily-list">
-      `;
-
-      // Sort dates in descending order (newest first)
-      const sortedDates = Object.keys(stats.daily).sort((a, b) => new Date(b) - new Date(a));
-
-      for (const day of sortedDates) {
-        html += `
-          <div class="daily-item">
-            <span>${day}</span>
-            <span><strong>${stats.daily[day].count}</strong> clicks</span>
-          </div>
-        `;
+      
+      const gist = await gistResponse.json();
+      let stats = {clicks: 0, revenue: 0, daily: {}};
+      
+      if (gist.files && gist.files["stats.json"]) {
+        try { 
+          stats = JSON.parse(gist.files["stats.json"].content); 
+        } catch(e) { 
+          console.warn("Invalid stats.json, using default stats"); 
+        }
       }
-
-      html += `</div></div>`;
+      
+      // Update UI with the stats
+      updateUI(stats);
     }
-
-    statsContainer.innerHTML = html;
     
     // Auto-scroll to graph after content loads
     autoScrollToGraph();
@@ -702,10 +778,60 @@ async function loadStats() {
     console.error("Error loading stats:", error);
     statsContainer.innerHTML = `
       <div style="color: var(--error); text-align: center; padding: 20px;">
-        ❌ Error loading statistics. Please try again.
+        ❌ Error loading statistics: ${error.message}
+        <br>
+        <button class="retry-button" onclick="loadStats()">Retry</button>
       </div>
     `;
   }
+}
+
+// Function to update the UI with stats
+function updateUI(stats) {
+  const statsContainer = document.getElementById('statsDetails');
+  
+  // Build HTML display with stats side by side
+  let html = `
+    <div class="stats-container">
+      <div class="stat-box">
+        <div class="stat-label">Total Clicks</div>
+        <div class="stat-value">${stats.clicks.toLocaleString()}</div>
+        <div class="stat-desc">All-time click count</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value">$${stats.revenue.toFixed(3)}</div>
+        <div class="stat-desc">Your earnings</div>
+      </div>
+    </div>
+  `;
+
+  // Create the graph
+  createGraph(stats.daily);
+
+  if (stats.daily && Object.keys(stats.daily).length) {
+    html += `
+      <div class="daily-stats">
+        <h3>📈 Daily Performance</h3>
+        <div class="daily-list">
+    `;
+
+    // Sort dates in descending order (newest first)
+    const sortedDates = Object.keys(stats.daily).sort((a, b) => new Date(b) - new Date(a));
+
+    for (const day of sortedDates) {
+      html += `
+        <div class="daily-item">
+          <span>${day}</span>
+          <span><strong>${stats.daily[day].count}</strong> clicks</span>
+        </div>
+      `;
+    }
+
+    html += `</div></div>`;
+  }
+
+  statsContainer.innerHTML = html;
 }
 
 // Load stats on page load
