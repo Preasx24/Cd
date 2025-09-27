@@ -2,112 +2,524 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AdRevenuePro Stats</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdRevenuePro Stats Dashboard</title>
 <style>
-body { font-family:sans-serif; background:#121212; color:#eee; padding:20px; }
-.card { background:#1e1e1e; padding:20px; border-radius:12px; max-width:600px; margin:auto; }
-pre { background:#000; padding:12px; border-radius:8px; color:#0f0; word-wrap:break-word; }
-h2, h3 { margin-bottom:10px; }
-.stat-item { margin-bottom:8px; }
-.url-box { background:#222; padding:10px; border-radius:6px; margin-bottom:10px; word-break:break-all; }
-ul { margin:6px 0 0 18px; }
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #10b981;
+  --dark-bg: #0f0f23;
+  --card-bg: #1a1b2e;
+  --card-border: #2d2d4d;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--dark-bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding: 20px;
+  min-height: 100vh;
+  background-image: radial-gradient(circle at 15% 50%, rgba(29, 78, 216, 0.15) 0%, transparent 65%),
+                    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 55%);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.header p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--card-border);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-header h2 {
+  font-size: 1.5rem;
+  margin-left: 10px;
+}
+
+.icon {
+  font-size: 1.8rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border-left: 4px solid var(--primary);
+}
+
+.stat-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 10px 0;
+  color: var(--secondary);
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.url-container {
+  margin-top: 15px;
+}
+
+.url-box {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  word-break: break-all;
+}
+
+.url-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.copy-btn.copied {
+  background: var(--success);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-3px);
+}
+
+.daily-stats {
+  margin-top: 20px;
+}
+
+.daily-stats h3 {
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.daily-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.daily-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.daily-item:last-child {
+  border-bottom: none;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--success);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.loading {
+  text-align: center;
+  padding: 30px;
+  color: var(--text-muted);
+}
+
+.spinner {
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid var(--primary);
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .card {
+    padding: 20px 15px;
+  }
+}
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>📊 Your Stats</h2>
-  <p id="welcome"></p>
-  <div id="statsDetails">Loading...</div>
-
-  <h3>URLs for Sharing</h3>
-  <div>
-    <div class="stat-item"><strong>Custom Track URL:</strong></div>
-    <div id="trackUrl" class="url-box"></div>
-    <div class="stat-item"><strong>Invite URL (max 10 loads/day):</strong></div>
-    <div id="inviteUrl" class="url-box"></div>
+<div class="container">
+  <div class="header">
+    <h1>AdRevenuePro Dashboard</h1>
+    <p>Track your earnings and manage your links</p>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">📊</div>
+      <h2>Your Performance Stats</h2>
+    </div>
+    <p id="welcome" style="margin-bottom: 20px;"></p>
+    
+    <div id="statsDetails" class="loading">
+      <div class="spinner"></div>
+      <p>Loading your statistics...</p>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">🔗</div>
+      <h2>Your Sharing URLs</h2>
+    </div>
+    
+    <div class="url-container">
+      <div class="url-box">
+        <div class="url-label">Custom Track URL</div>
+        <div id="trackUrl" class="url-text"></div>
+        <button class="copy-btn" data-url="trackUrl">Copy</button>
+      </div>
+      
+      <div class="url-box">
+        <div class="url-label">Invite URL (max 10 loads/day)</div>
+        <div id="inviteUrl" class="url-text"></div>
+        <button class="copy-btn" data-url="inviteUrl" data-invite="true">Copy</button>
+      </div>
+    </div>
+    
+    <div class="action-buttons">
+      <a href="out.html" class="btn btn-primary">Withdraw Earnings</a>
+      <button class="btn btn-secondary" id="refreshBtn">Refresh Stats</button>
+    </div>
   </div>
 </div>
 
+<div class="toast" id="toast">Copied to clipboard!</div>
+
 <script>
-const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
-const tokenUrl="https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-const user=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
+const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
+const user = JSON.parse(localStorage.getItem("adRevenueUser") || "{}");
 
-if(!user.accessCode){ document.body.innerHTML="❌ Not logged in"; throw new Error("No user"); }
-
-document.getElementById('welcome').textContent=`Welcome ${user.username}`;
-document.getElementById('trackUrl').textContent=`https://revenue.dtech-services.co.za/track.html#${user.accessCode}`;
-document.getElementById('inviteUrl').textContent=`https://revenue.dtech-services.co.za/#${user.accessCode}`;
-
-async function loadStats(){
-  const map=await fetch(mappingUrl).then(r=>r.json());
-  let entry=map.find(e=>e.accessCode===user.accessCode);
-
-  // If no entry, create a new gist and update mapping
-  if(!entry){
-    const token=(await fetch(tokenUrl).then(r=>r.text())).trim();
-    const newGist=await fetch("https://api.github.com/gists",{
-      method:"POST",
-      headers:{
-        "Authorization":"token "+token,
-        "Accept":"application/vnd.github+json"
-      },
-      body:JSON.stringify({
-        description:"AdRevenuePro stats for "+user.username,
-        public:false,
-        files:{"stats.json":{content:JSON.stringify({clicks:0,revenue:0,daily:{}},null,2)}}
-      })
-    }).then(r=>r.json());
-
-    entry={accessCode:user.accessCode,gistUrl:newGist.html_url,username:user.username};
-    map.push(entry);
-
-    // Update main mapping gist
-    await fetch("https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08",{
-      method:"PATCH",
-      headers:{
-        "Authorization":"token "+token,
-        "Accept":"application/vnd.github+json"
-      },
-      body:JSON.stringify({files:{"gistfile1.txt":{content:JSON.stringify(map,null,2)}}})
-    });
-  }
-
-  // --- Normalize gist API URL ---
-  let gistApi;
-  if(entry.gistUrl.includes("gist.github.com")){
-    const gistId=entry.gistUrl.split("/").pop();
-    gistApi="https://api.github.com/gists/"+gistId;
-  } else if(entry.gistUrl.includes("api.github.com/gists/")){
-    gistApi=entry.gistUrl;
-  } else {
-    document.getElementById("statsDetails").textContent="❌ Invalid gist URL";
-    return;
-  }
-
-  // --- Fetch stats ---
-  const gist=await fetch(gistApi).then(r=>r.json());
-  let stats={clicks:0,revenue:0,daily:{}};
-  if(gist.files && gist.files["stats.json"]){
-    try { stats=JSON.parse(gist.files["stats.json"].content); }
-    catch(e){ console.warn("Invalid stats.json, resetting"); }
-  }
-
-  // --- Build HTML display ---
-  let html=`<div class="stat-item"><strong>Total Clicks:</strong> ${stats.clicks}</div>`;
-  html+=`<div class="stat-item"><strong>Total Revenue:</strong> $${stats.revenue.toFixed(3)}</div>`;
-
-  if(stats.daily && Object.keys(stats.daily).length){
-    html+='<div class="stat-item"><strong>Daily Stats:</strong><ul>';
-    for(const day in stats.daily){
-      html+=`<li>${day}: ${stats.daily[day].count} clicks</li>`;
-    }
-    html+='</ul></div>';
-  }
-
-  document.getElementById("statsDetails").innerHTML=html;
+// Check if user is logged in
+if (!user.accessCode) {
+  document.body.innerHTML = `
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+      <h1 style="color: #ef4444; margin-bottom: 20px;">❌ Access Denied</h1>
+      <p>You are not logged in. Please login to access your dashboard.</p>
+      <a href="index.html" style="margin-top: 20px; padding: 10px 20px; background: #6366f1; color: white; border-radius: 8px; text-decoration: none;">Go to Login</a>
+    </div>
+  `;
+  throw new Error("No user");
 }
 
+// Set welcome message
+document.getElementById('welcome').textContent = `Welcome, ${user.username}!`;
+
+// Set URLs
+document.getElementById('trackUrl').textContent = `https://revenue.dtech-services.co.za/track.html#${user.accessCode}`;
+document.getElementById('inviteUrl').textContent = `https://revenue.dtech-services.co.za/#${user.accessCode}`;
+
+// Copy functionality
+document.querySelectorAll('.copy-btn').forEach(button => {
+  button.addEventListener('click', function() {
+    const urlId = this.getAttribute('data-url');
+    const isInvite = this.getAttribute('data-invite') === 'true';
+    const urlText = document.getElementById(urlId).textContent;
+    
+    let textToCopy = urlText;
+    
+    if (isInvite) {
+      textToCopy = `${urlText}\n\nJoin me on AdRevenuePro - a user-friendly ad system that provides access to ad monetization through direct advertising. It's an easy way to generate revenue by sharing ad links and earning cash as people view and click those links!`;
+    }
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      // Show toast notification
+      const toast = document.getElementById('toast');
+      if (isInvite) {
+        toast.textContent = "Invite URL and message copied!";
+      } else {
+        toast.textContent = "URL copied to clipboard!";
+      }
+      toast.classList.add('show');
+      
+      // Change button text temporarily
+      const originalText = this.textContent;
+      this.textContent = 'Copied!';
+      this.classList.add('copied');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        this.textContent = originalText;
+        this.classList.remove('copied');
+      }, 3000);
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
+  });
+});
+
+// Refresh button functionality
+document.getElementById('refreshBtn').addEventListener('click', loadStats);
+
+async function loadStats() {
+  const statsContainer = document.getElementById('statsDetails');
+  statsContainer.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading your statistics...</p>
+    </div>
+  `;
+  
+  try {
+    const map = await fetch(mappingUrl).then(r => r.json());
+    let entry = map.find(e => e.accessCode === user.accessCode);
+
+    // If no entry, create a new gist and update mapping
+    if (!entry) {
+      const token = (await fetch(tokenUrl).then(r => r.text())).trim();
+      const newGist = await fetch("https://api.github.com/gists", {
+        method: "POST",
+        headers: {
+          "Authorization": "token " + token,
+          "Accept": "application/vnd.github+json"
+        },
+        body: JSON.stringify({
+          description: "AdRevenuePro stats for " + user.username,
+          public: false,
+          files: {"stats.json": {content: JSON.stringify({clicks: 0, revenue: 0, daily: {}}, null, 2)}}
+        })
+      }).then(r => r.json());
+
+      entry = {accessCode: user.accessCode, gistUrl: newGist.html_url, username: user.username};
+      map.push(entry);
+
+      // Update main mapping gist
+      await fetch("https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08", {
+        method: "PATCH",
+        headers: {
+          "Authorization": "token " + token,
+          "Accept": "application/vnd.github+json"
+        },
+        body: JSON.stringify({files: {"gistfile1.txt": {content: JSON.stringify(map, null, 2)}}})
+      });
+    }
+
+    // Normalize gist API URL
+    let gistApi;
+    if (entry.gistUrl.includes("gist.github.com")) {
+      const gistId = entry.gistUrl.split("/").pop();
+      gistApi = "https://api.github.com/gists/" + gistId;
+    } else if (entry.gistUrl.includes("api.github.com/gists/")) {
+      gistApi = entry.gistUrl;
+    } else {
+      statsContainer.innerHTML = "<div style='color: var(--error); text-align: center; padding: 20px;'>❌ Invalid gist URL configuration</div>";
+      return;
+    }
+
+    // Fetch stats
+    const gist = await fetch(gistApi).then(r => r.json());
+    let stats = {clicks: 0, revenue: 0, daily: {}};
+    if (gist.files && gist.files["stats.json"]) {
+      try { 
+        stats = JSON.parse(gist.files["stats.json"].content); 
+      } catch(e) { 
+        console.warn("Invalid stats.json, resetting"); 
+      }
+    }
+
+    // Build HTML display
+    let html = `
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Total Clicks</div>
+          <div class="stat-value">${stats.clicks}</div>
+          <div class="stat-desc">All-time click count</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-value">$${stats.revenue.toFixed(3)}</div>
+          <div class="stat-desc">Your earnings</div>
+        </div>
+      </div>
+    `;
+
+    if (stats.daily && Object.keys(stats.daily).length) {
+      html += `
+        <div class="daily-stats">
+          <h3>📈 Daily Performance</h3>
+          <div class="daily-list">
+      `;
+      
+      // Sort dates in descending order (newest first)
+      const sortedDates = Object.keys(stats.daily).sort((a, b) => new Date(b) - new Date(a));
+      
+      for (const day of sortedDates) {
+        html += `
+          <div class="daily-item">
+            <span>${day}</span>
+            <span><strong>${stats.daily[day].count}</strong> clicks</span>
+          </div>
+        `;
+      }
+      
+      html += `</div></div>`;
+    }
+
+    statsContainer.innerHTML = html;
+  } catch (error) {
+    console.error("Error loading stats:", error);
+    statsContainer.innerHTML = `
+      <div style="color: var(--error); text-align: center; padding: 20px;">
+        ❌ Error loading statistics. Please try again.
+      </div>
+    `;
+  }
+}
+
+// Load stats on page load
 loadStats();
 </script>
 </body>
