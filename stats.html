@@ -199,6 +199,19 @@ body {
   color: var(--success);
 }
 
+.setup-note {
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 4px solid var(--warning);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.setup-note strong {
+  color: var(--warning);
+}
+
 .url-box {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
@@ -236,6 +249,17 @@ body {
 
 .copy-btn.copied {
   background: var(--success);
+}
+
+.copy-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.copy-btn:disabled:hover {
+  background: var(--text-muted);
+  transform: none;
 }
 
 .action-buttons {
@@ -278,6 +302,17 @@ body {
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .daily-stats {
@@ -345,6 +380,41 @@ body {
   margin: 0 auto 10px;
 }
 
+.setup-status {
+  text-align: center;
+  padding: 20px;
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 12px;
+  margin: 15px 0;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.setup-status h3 {
+  color: var(--warning);
+  margin-bottom: 10px;
+}
+
+.setup-status p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin: 15px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--warning), var(--secondary));
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -407,6 +477,15 @@ body {
     </div>
     <p id="welcome" style="margin-bottom: 15px;"></p>
 
+    <div id="setupStatus" class="setup-status" style="display: none;">
+      <h3>🔄 Setting up your account</h3>
+      <p>Your account is being configured. This usually takes about 5 minutes.</p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p id="setupMessage">Please wait while we set everything up...</p>
+    </div>
+
     <div id="statsDetails" class="loading">
       <div class="spinner"></div>
       <p>Loading your statistics...</p>
@@ -425,26 +504,30 @@ body {
       <h2>Your Sharing URLs</h2>
     </div>
 
-    <div class="sharing-note">
-      <strong>Share these URLs</strong> on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn!
+    <div class="sharing-note" id="sharingNote" style="display: none;">
+      <strong>✅ Ready to share!</strong> Share these URLs on WhatsApp, Facebook, or other platforms to get more users to click and view the ads. The more people that view your links, the more revenue you'll earn!
+    </div>
+
+    <div class="setup-note" id="setupNote">
+      <strong>⏳ Account setup in progress</strong> Please wait 5 minutes for your account to be fully set up before sharing your links. Your URLs will be ready soon!
     </div>
 
     <div class="url-container">
       <div class="url-box">
         <div class="url-label">Custom Track URL</div>
         <div id="trackUrl" class="url-text"></div>
-        <button class="copy-btn" data-url="trackUrl">Copy</button>
+        <button class="copy-btn" id="trackCopyBtn" data-url="trackUrl" disabled>Copy</button>
       </div>
 
       <div class="url-box">
         <div class="url-label">Invite URL (max 10 loads/day)</div>
         <div id="inviteUrl" class="url-text"></div>
-        <button class="copy-btn" data-url="inviteUrl" data-invite="true">Copy</button>
+        <button class="copy-btn" id="inviteCopyBtn" data-url="inviteUrl" data-invite="true" disabled>Copy</button>
       </div>
     </div>
 
     <div class="action-buttons">
-      <a href="out.html" class="btn btn-primary">Withdraw Earnings</a>
+      <a href="out.html" class="btn btn-primary" id="withdrawBtn" style="display: none;">Withdraw Earnings</a>
       <button class="btn btn-secondary" id="refreshBtn">Refresh Stats</button>
     </div>
   </div>
@@ -479,9 +562,57 @@ const inviteUrl = `https://revenue.dtech-services.co.za/#${user.accessCode}`;
 document.getElementById('trackUrl').textContent = trackUrl;
 document.getElementById('inviteUrl').textContent = inviteUrl;
 
+// Track account creation time
+if (!user.accountCreatedAt) {
+  user.accountCreatedAt = new Date().toISOString();
+  localStorage.setItem("adRevenueUser", JSON.stringify(user));
+}
+
+// Check if account is still setting up
+function isAccountSettingUp() {
+  const accountCreatedAt = new Date(user.accountCreatedAt);
+  const now = new Date();
+  const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
+  
+  return minutesSinceCreation < 5; // Show setup status for first 5 minutes
+}
+
+// Update setup progress
+function updateSetupProgress() {
+  const accountCreatedAt = new Date(user.accountCreatedAt);
+  const now = new Date();
+  const minutesSinceCreation = (now - accountCreatedAt) / (1000 * 60);
+  const progressPercent = Math.min((minutesSinceCreation / 5) * 100, 100);
+  
+  document.getElementById('progressFill').style.width = `${progressPercent}%`;
+  
+  if (minutesSinceCreation < 1) {
+    document.getElementById('setupMessage').textContent = 'Initializing your account...';
+  } else if (minutesSinceCreation < 3) {
+    document.getElementById('setupMessage').textContent = 'Setting up tracking systems...';
+  } else if (minutesSinceCreation < 5) {
+    document.getElementById('setupMessage').textContent = 'Finalizing setup... Almost ready!';
+  } else {
+    document.getElementById('setupMessage').textContent = 'Setup complete! Your account is ready.';
+  }
+}
+
+// Enable sharing features when account is ready
+function enableSharingFeatures() {
+  document.getElementById('sharingNote').style.display = 'block';
+  document.getElementById('setupNote').style.display = 'none';
+  document.getElementById('withdrawBtn').style.display = 'inline-block';
+  
+  // Enable copy buttons
+  document.getElementById('trackCopyBtn').disabled = false;
+  document.getElementById('inviteCopyBtn').disabled = false;
+}
+
 // Copy functionality
 document.querySelectorAll('.copy-btn').forEach(button => {
   button.addEventListener('click', function() {
+    if (this.disabled) return;
+    
     const urlId = this.getAttribute('data-url');
     const isInvite = this.getAttribute('data-invite') === 'true';
     
@@ -589,6 +720,33 @@ function autoScrollToGraph() {
 
 async function loadStats() {
   const statsContainer = document.getElementById('statsDetails');
+  const setupStatus = document.getElementById('setupStatus');
+  
+  // Update setup progress
+  updateSetupProgress();
+  
+  // Check if account is still setting up
+  if (isAccountSettingUp()) {
+    setupStatus.style.display = 'block';
+    statsContainer.style.display = 'none';
+    document.getElementById('graphContainer').style.display = 'none';
+    
+    // Show loading message after a delay to indicate we're checking stats
+    setTimeout(() => {
+      statsContainer.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Checking your account status...</p>
+        </div>
+      `;
+      statsContainer.style.display = 'block';
+    }, 2000);
+  } else {
+    setupStatus.style.display = 'none';
+    statsContainer.style.display = 'block';
+    enableSharingFeatures();
+  }
+
   statsContainer.innerHTML = `
     <div class="loading">
       <div class="spinner"></div>
@@ -653,6 +811,15 @@ async function loadStats() {
       }
     }
 
+    // Check if we have real data (not just zeros)
+    const hasRealData = stats.clicks > 0 || stats.revenue > 0 || Object.keys(stats.daily).length > 0;
+    
+    // If account setup time has passed OR we have real data, enable features
+    if (!isAccountSettingUp() || hasRealData) {
+      enableSharingFeatures();
+      setupStatus.style.display = 'none';
+    }
+
     // Build HTML display with stats side by side
     let html = `
       <div class="stats-container">
@@ -710,6 +877,16 @@ async function loadStats() {
 
 // Load stats on page load
 loadStats();
+
+// Update progress bar every 30 seconds while account is setting up
+setInterval(() => {
+  if (isAccountSettingUp()) {
+    updateSetupProgress();
+  } else {
+    enableSharingFeatures();
+    document.getElementById('setupStatus').style.display = 'none';
+  }
+}, 30000);
 </script>
 </body>
 </html>
