@@ -1,173 +1,383 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>AdRevenuePro - Secure Login</title>
 <style>
-* {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
-body {background:linear-gradient(135deg, #0f2027, #203a43, #2c5364);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;}
-.container {width:100%;max-width:500px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.5);padding:40px 30px;border:1px solid rgba(255,255,255,0.1);position:relative;overflow:hidden;}
-.container::before {content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);z-index:-1;}
-.header {text-align:center;margin-bottom:30px;}
-.logo {font-size:36px;margin-bottom:10px;color:#4facfe;}
-.title {font-size:28px;font-weight:600;margin-bottom:10px;color:white;}
-.subtitle {color:rgba(255,255,255,0.7);font-size:16px;}
-.tabs {display:flex;margin-bottom:25px;border-bottom:1px solid rgba(255,255,255,0.1);}
-.tab {padding:12px 20px;color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.3s ease;border-bottom:3px solid transparent;}
-.tab.active {color:#4facfe;border-bottom:3px solid #4facfe;}
-.tab-content {display:none;}
-.tab-content.active {display:block;}
-.form-group {margin-bottom:20px;}
-.form-label {display:block;color:rgba(255,255,255,0.9);margin-bottom:8px;font-size:14px;font-weight:500;}
-.form-input {width:100%;padding:15px 20px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:16px;transition:all 0.3s ease;}
-.form-input:focus {outline:none;border-color:#4facfe;box-shadow:0 0 0 2px rgba(79,172,254,0.2);}
-.input-hint {color:rgba(255,255,255,0.6);font-size:12px;margin-top:5px;display:block;}
-.btn {width:100%;padding:15px;background:linear-gradient(45deg, #4facfe, #00f2fe);border:none;border-radius:8px;color:white;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;box-shadow:0 5px 15px rgba(0,242,254,0.3);margin-top:10px;}
-.btn:hover {transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,242,254,0.4);}
-.password-display {background:rgba(0,0,0,0.2);border-radius:8px;padding:15px;margin:15px 0;word-break:break-all;color:#4facfe;font-family:monospace;font-size:18px;text-align:center;border:1px dashed rgba(79,172,254,0.3);min-height:60px;display:flex;align-items:center;justify-content:center;}
-.action-buttons {display:flex;gap:10px;margin-top:15px;}
-.action-btn {flex:1;padding:10px;background:rgba(255,255,255,0.1);border:none;border-radius:5px;color:white;cursor:pointer;transition:all 0.3s ease;}
-.action-btn:hover {background:rgba(255,255,255,0.2);}
-.success-message {color:#4facfe;font-size:14px;margin-top:10px;text-align:center;display:none;padding:10px;background:rgba(79,172,254,0.1);border-radius:5px;}
-.error-message {color:#ff6b6b;font-size:14px;margin-top:10px;text-align:center;display:none;padding:10px;background:rgba(255,107,107,0.1);border-radius:5px;}
-@keyframes pulse {0% {transform:scale(1);}50% {transform:scale(1.05);}100% {transform:scale(1);}}
-.pulse {animation:pulse 2s infinite;}
+/* Full UI styling */
+*{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI, Tahoma, Arial, sans-serif}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364)}
+.container{width:100%;max-width:560px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);border-radius:14px;padding:34px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 15px 35px rgba(0,0,0,0.45);position:relative;overflow:hidden}
+.header{text-align:center;margin-bottom:22px}
+.logo{font-size:36px;color:#4facfe}
+.title{font-size:26px;color:#fff;margin-top:6px;font-weight:700}
+.subtitle{color:rgba(255,255,255,0.75);margin-top:6px}
+.tabs{display:flex;margin:18px 0;border-bottom:1px solid rgba(255,255,255,0.06)}
+.tab{padding:10px 18px;color:rgba(255,255,255,0.75);cursor:pointer;border-bottom:3px solid transparent;transition:all .18s}
+.tab.active{color:#4facfe;border-bottom:3px solid #4facfe}
+.tab-content{display:none;padding-top:16px}
+.tab-content.active{display:block}
+.form-group{margin-bottom:14px}
+.form-label{color:rgba(255,255,255,0.9);font-size:13px;margin-bottom:6px;display:block}
+.form-input{width:100%;padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#fff}
+.form-input:focus{outline:none;box-shadow:0 0 0 3px rgba(79,172,254,0.08);border-color:#4facfe}
+.btn{width:100%;padding:12px 14px;border-radius:10px;border:none;background:linear-gradient(45deg,#4facfe,#00f2fe);color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+.password-display{margin-top:12px;padding:14px;border-radius:8px;border:1px dashed rgba(79,172,254,0.25);background:rgba(0,0,0,0.18);color:#4facfe;font-family:monospace;text-align:center;min-height:54px;display:flex;align-items:center;justify-content:center}
+.action-row{display:flex;gap:10px;margin-top:12px}
+.action-btn{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:#fff;cursor:pointer}
+.message{margin-top:12px;padding:10px;border-radius:8px;display:none}
+.message.success{background:rgba(79,172,254,0.08);color:#aee6ff}
+.message.error{background:rgba(255,107,107,0.08);color:#ffd7d7}
+.small{font-size:13px;color:rgba(255,255,255,0.75);margin-top:8px;text-align:center}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="logo">💰</div>
-    <h1 class="title">AdRevenuePro</h1>
-    <p class="subtitle">Earn money by sharing ad links</p>
-  </div>
+  <div class="container" id="app">
+    <div class="header">
+      <div class="logo">💰</div>
+      <div class="title">AdRevenuePro</div>
+      <div class="subtitle">Create account, get an access code, and track revenue</div>
+    </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="register">Create Account</div>
-    <div class="tab" data-tab="login">Login</div>
-  </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="register">Create Account</div>
+      <div class="tab" data-tab="login">Login</div>
+    </div>
 
-  <!-- Registration Tab -->
-  <div class="tab-content active" id="register">
-    <div class="form-group">
-      <label class="form-label" for="username">Choose Your Username</label>
-      <input type="text" id="username" class="form-input" placeholder="e.g. lefa2023">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="specificText">Campaign Name</label>
-      <input type="text" id="specificText" class="form-input" placeholder="e.g. SummerPromo">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="masterPassword">Master Password</label>
-      <input type="password" id="masterPassword" class="form-input" placeholder="Create a strong password">
-    </div>
-    <button id="generateBtn" class="btn pulse">GENERATE ACCESS CODE</button>
-    <div class="password-display" id="passwordDisplay">Your 8-character access code will appear here</div>
-    <div class="action-buttons">
-      <button class="action-btn" id="copyBtn">Copy Access Code</button>
-      <button class="action-btn" id="downloadBtn">Download Details</button>
-    </div>
-    <div class="success-message" id="regSuccessMessage">Account created successfully! You can now log in.</div>
-  </div>
+    <!-- Register -->
+    <div class="tab-content active" id="register">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input id="username" class="form-input" placeholder="e.g. lefa2023" autocomplete="off" />
+      </div>
 
-  <!-- Login Tab -->
-  <div class="tab-content" id="login">
-    <div class="form-group">
-      <label class="form-label" for="loginUsername">Your Username</label>
-      <input type="text" id="loginUsername" class="form-input" placeholder="Enter your username">
+      <div class="form-group">
+        <label class="form-label">Campaign Name</label>
+        <input id="specificText" class="form-input" placeholder="e.g. SummerPromo" autocomplete="off" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Master Password</label>
+        <input id="masterPassword" type="password" class="form-input" placeholder="Create a strong password" autocomplete="off" />
+      </div>
+
+      <button id="generateBtn" class="btn pulse">GENERATE ACCESS CODE</button>
+
+      <div id="passwordDisplay" class="password-display">Your 8-character access code will appear here</div>
+
+      <div class="action-row">
+        <button id="copyBtn" class="action-btn">Copy Access Code</button>
+        <button id="downloadBtn" class="action-btn">Download Details</button>
+      </div>
+
+      <div id="regMsg" class="message success"></div>
+      <div id="regErr" class="message error"></div>
+      <div class="small">After creation, your account mapping and user gist will be created/updated automatically.</div>
     </div>
-    <div class="form-group">
-      <label class="form-label" for="loginMasterPassword">Master Password</label>
-      <input type="password" id="loginMasterPassword" class="form-input" placeholder="Enter your master password">
+
+    <!-- Login -->
+    <div class="tab-content" id="login">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input id="loginUsername" class="form-input" placeholder="Your username" autocomplete="off" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Campaign Name</label>
+        <input id="loginSpecificText" class="form-input" placeholder="Campaign name" autocomplete="off" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Master Password</label>
+        <input id="loginMasterPassword" type="password" class="form-input" placeholder="Your master password" autocomplete="off" />
+      </div>
+
+      <button id="loginBtn" class="btn">LOGIN TO DASHBOARD</button>
+
+      <div id="loginMsg" class="message success"></div>
+      <div id="loginErr" class="message error"></div>
     </div>
-    <button id="loginBtn" class="btn">LOGIN TO DASHBOARD</button>
-    <div class="error-message" id="loginErrorMessage">Login failed. Please check your credentials.</div>
-    <div class="success-message" id="loginSuccessMessage">Authentication successful! Redirecting to stats...</div>
   </div>
-</div>
 
 <script>
-// Tab switching
-const tabs=document.querySelectorAll('.tab');
-const tabContents=document.querySelectorAll('.tab-content');
-tabs.forEach(tab=>tab.addEventListener('click',()=>{const tabId=tab.getAttribute('data-tab');tabs.forEach(t=>t.classList.remove('active'));tab.classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById(tabId).classList.add('active');}));
+/* ----------------------
+   Config: your gists
+   ---------------------- */
+const MAPPING_RAW_URL = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+const MAPPING_GIST_ID = "4517ac43eff88b7e226fbbdc627a3c08";
+const TOKEN_GIST_RAW = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
 
-// Access code generator
-function generateAccessCode(username,specificText,masterPassword){
-  const seed=username+specificText+masterPassword;
-  let hash=0;
-  for(let i=0;i<seed.length;i++){const char=seed.charCodeAt(i);hash=((hash<<5)-hash)+char;hash=Math.abs(hash&hash);}
-  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let code='';
-  function seededRandom(seed){const x=Math.sin(seed)*10000;return x-Math.floor(x);}
-  for(let i=0;i<8;i++){code+=chars.charAt(Math.floor(seededRandom(hash+i)*chars.length));}
+/* ----------------------
+   Utility & UI helpers
+   ---------------------- */
+function $id(id){ return document.getElementById(id); }
+function showMessage(el, text){ el.textContent = text; el.style.display = text ? "block" : "none"; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* Tab switching */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=> {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+  });
+});
+
+/* ----------------------
+   Deterministic access code generator (LCG-based)
+   - same inputs -> same code
+   ---------------------- */
+function stringSeed(s){
+  let seed = 2166136261 >>> 0;
+  for(let i=0;i<s.length;i++){
+    seed ^= s.charCodeAt(i);
+    seed = Math.imul(seed, 16777619) >>> 0;
+  }
+  return seed >>> 0;
+}
+function lcgNext(seed){ return (Math.imul(seed,1664525) + 1013904223) >>> 0; }
+function generateAccessCode(username, specificText, masterPassword){
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let seed = stringSeed(username + '||' + specificText + '||' + masterPassword);
+  let code = '';
+  for(let i=0;i<8;i++){
+    seed = lcgNext(seed);
+    code += chars[seed % chars.length];
+  }
   return code;
 }
 
-// Create or update user gist mapping
-async function createUserGist(userData){
-  const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
-  const mappingGistApi="https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08";
-  const mapResponse=await fetch("https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt");
-  let map=await mapResponse.json();
-
-  let entry=map.find(e=>e.accessCode===userData.accessCode);
-  if(!entry){
-    const newGistResp=await fetch("https://api.github.com/gists",{
-      method:"POST",
-      headers:{"Authorization":"token "+token.trim(),"Accept":"application/vnd.github+json"},
-      body:JSON.stringify({description:`AdRevenuePro stats for ${userData.username}`,public:false,files:{"stats.json":{content:JSON.stringify({clicks:0,revenue:0},null,2)}}})
-    });
-    const newGist=await newGistResp.json();
-    userData.gistUrl=newGist.html_url;
-    map.push({username:userData.username,accessCode:userData.accessCode,gistUrl:userData.gistUrl});
-    await fetch(mappingGistApi,{
-      method:"PATCH",
-      headers:{"Authorization":"token "+token.trim(),"Accept":"application/vnd.github+json"},
-      body:JSON.stringify({files:{"gistfile1.txt":{content:JSON.stringify(map,null,2)}}})
-    });
-  } else {
-    userData.gistUrl=entry.gistUrl;
-  }
-  localStorage.setItem("adRevenueUser",JSON.stringify(userData));
-  return userData;
+/* ----------------------
+   GitHub gist helpers
+   (token is read from your token gist)
+   ---------------------- */
+async function getToken(){
+  const r = await fetch(TOKEN_GIST_RAW);
+  if(!r.ok) throw new Error("Failed to fetch token gist");
+  return (await r.text()).trim();
 }
 
-// Registration
-document.getElementById('generateBtn').addEventListener('click',async ()=>{
-  const username=document.getElementById('username').value.trim();
-  const specificText=document.getElementById('specificText').value.trim();
-  const masterPassword=document.getElementById('masterPassword').value;
-  if(!username||!specificText||!masterPassword){alert('Fill all fields'); return;}
-  const accessCode=generateAccessCode(username,specificText,masterPassword);
-  document.getElementById('passwordDisplay').textContent=accessCode;
-  let userData={username,specificText,accessCode};
-  userData=await createUserGist(userData);
-  document.getElementById('regSuccessMessage').style.display='block';
-  document.getElementById('loginUsername').value=username;
-});
+async function fetchMapping(){
+  try{
+    const r = await fetch(MAPPING_RAW_URL);
+    if(!r.ok) { console.warn('mapping fetch not ok', r.status); return []; }
+    const txt = await r.text();
+    // Try parse; mapping may be [] initially
+    try { const parsed = JSON.parse(txt); return Array.isArray(parsed) ? parsed : []; } catch(e) {
+      // If file empty or not valid JSON, return empty array
+      return [];
+    }
+  } catch(err){
+    console.warn('fetchMapping error', err);
+    return [];
+  }
+}
 
-// Copy & Download
-document.getElementById('copyBtn').addEventListener('click',()=>{const code=document.getElementById('passwordDisplay').textContent;if(code){navigator.clipboard.writeText(code).then(()=>alert('Copied!'));}});
-document.getElementById('downloadBtn').addEventListener('click',()=>{const u=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");if(u.accessCode){const blob=new Blob([`Username: ${u.username}\nCampaign: ${u.specificText}\nAccess Code: ${u.accessCode}\n`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`adrevenue-${u.username}.txt`;document.body.appendChild(a);a.click();document.body.removeChild(a);}});
+async function saveMapping(token, mapping){
+  const api = `https://api.github.com/gists/${MAPPING_GIST_ID}`;
+  const body = { files: { "gistfile1.txt": { content: JSON.stringify(mapping, null, 2) } } };
+  const r = await fetch(api, { method: "PATCH", headers: { "Authorization": "token " + token.trim(), "Accept":"application/vnd.github+json", "Content-Type":"application/json" }, body: JSON.stringify(body) });
+  if(!r.ok) throw new Error("Failed to save mapping gist: " + r.status);
+  return await r.json();
+}
 
-// Login
-document.getElementById('loginBtn').addEventListener('click',()=>{
-  const username=document.getElementById('loginUsername').value.trim();
-  const masterPassword=document.getElementById('loginMasterPassword').value;
-  const stored=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
-  if(username===stored.username && generateAccessCode(stored.username,stored.specificText,masterPassword)===stored.accessCode){
-    document.getElementById('loginSuccessMessage').style.display='block';
-    setTimeout(()=>window.location.href='stats.html',1500);
-  } else{
-    document.getElementById('loginErrorMessage').style.display='block';
+async function createUserGistOnGithub(token, username, accessCode){
+  const api = "https://api.github.com/gists";
+  const initialStats = { clicks:0, revenue:0, daily: {}, activity: [] };
+  const body = {
+    description: `AdRevenuePro stats for ${username}`,
+    public: false,
+    files: { "stats.json": { content: JSON.stringify(initialStats, null, 2) } }
+  };
+  const r = await fetch(api, { method: "POST", headers: { "Authorization":"token "+token.trim(), "Accept":"application/vnd.github+json", "Content-Type":"application/json" }, body: JSON.stringify(body) });
+  if(!r.ok){ const txt = await r.text(); throw new Error("Create gist failed: "+r.status+" "+txt); }
+  return await r.json(); // contains id and html_url
+}
+
+async function deleteGistOnGithub(token, gistId){
+  const api = `https://api.github.com/gists/${gistId}`;
+  const r = await fetch(api, { method: "DELETE", headers: { "Authorization":"token "+token.trim() } });
+  return r.ok;
+}
+
+/* ----------------------
+   Core flow: Registration
+   ---------------------- */
+async function registerUser(username, specificText, masterPassword){
+  // create deterministic access code
+  const accessCode = generateAccessCode(username, specificText, masterPassword);
+
+  // UI feedback
+  $id('passwordDisplay').textContent = accessCode;
+  showMessage($id('regMsg'), "Generating account... please wait");
+  showMessage($id('regErr'), "");
+
+  // Try to fetch existing mapping
+  let mapping = await fetchMapping();
+
+  // If mapping already contains this accessCode -> use it
+  const existing = mapping.find(e => e.accessCode === accessCode);
+  if(existing){
+    const userData = { username, specificText, accessCode, gistUrl: existing.gistUrl, gistId: existing.gistId || null };
+    localStorage.setItem('adRevenueUser', JSON.stringify(userData));
+    showMessage($id('regMsg'), "Account exists — mapped to existing gist.");
+    // Switch to login tab automatically
+    switchToLogin(userData);
+    return userData;
+  }
+
+  // No mapping -> create new gist and update mapping
+  try{
+    const token = await getToken();
+    // Create the user gist
+    const created = await createUserGistOnGithub(token, username, accessCode);
+    const gistUrl = created.html_url;
+    const gistId = created.id;
+
+    // Re-fetch mapping to protect against race condition
+    await sleep(300);
+    mapping = await fetchMapping();
+    const race = mapping.find(e => e.accessCode === accessCode);
+    if(race){
+      // someone else created mapping concurrently -> delete our created gist to avoid duplicates
+      await deleteGistOnGithub(token, gistId).catch(()=>{/*ignore*/});
+      const userData = { username, specificText, accessCode, gistUrl: race.gistUrl, gistId: race.gistId || null };
+      localStorage.setItem('adRevenueUser', JSON.stringify(userData));
+      showMessage($id('regMsg'), "Another process created this mapping — using existing mapping.");
+      switchToLogin(userData);
+      return userData;
+    }
+
+    // safe to add our entry to mapping
+    const newEntry = { username, accessCode, gistUrl, gistId };
+    mapping.push(newEntry);
+    await saveMapping(token, mapping);
+
+    const userData = { username, specificText, accessCode, gistUrl, gistId };
+    localStorage.setItem('adRevenueUser', JSON.stringify(userData));
+    showMessage($id('regMsg'), "Account created and mapping saved.");
+    switchToLogin(userData);
+    return userData;
+
+  } catch(err){
+    console.error("registerUser error", err);
+    showMessage($id('regErr'), "Failed to create account: " + (err.message||err));
+    throw err;
+  }
+}
+
+/* ----------------------
+   Helper: switch to login tab and prefill
+   ---------------------- */
+function switchToLogin(userData){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  const t = document.querySelector('.tab[data-tab="login"]');
+  t.classList.add('active');
+  document.getElementById('login').classList.add('active');
+  $id('loginUsername').value = userData.username || "";
+  $id('loginSpecificText').value = userData.specificText || "";
+  // clear master password input
+  $id('loginMasterPassword').value = "";
+}
+
+/* ----------------------
+   Login flow
+   ---------------------- */
+function loginUser(username, specificText, masterPassword){
+  showMessage($id('loginMsg'), "");
+  showMessage($id('loginErr'), "");
+  const saved = JSON.parse(localStorage.getItem('adRevenueUser')||"{}");
+  if(!saved || !saved.username){
+    showMessage($id('loginErr'), "No saved account on this browser — please register first.");
+    return false;
+  }
+  // verify username matches saved username (we only allow login to the saved account)
+  if(username !== saved.username || specificText !== saved.specificText){
+    showMessage($id('loginErr'), "Username or campaign does not match the saved account.");
+    return false;
+  }
+  const expected = generateAccessCode(username, specificText, masterPassword);
+  if(expected === saved.accessCode){
+    showMessage($id('loginMsg'), "Login successful — redirecting to stats...");
+    // ensure saved.accessCode is set (in case)
+    saved.accessCode = expected;
+    localStorage.setItem('adRevenueUser', JSON.stringify(saved));
+    setTimeout(()=>window.location.href = 'stats.html', 900);
+    return true;
+  } else {
+    showMessage($id('loginErr'), "Incorrect master password.");
+    return false;
+  }
+}
+
+/* ----------------------
+   UI bindings
+   ---------------------- */
+$id('generateBtn').addEventListener('click', async () => {
+  const username = $id('username').value.trim();
+  const specificText = $id('specificText').value.trim();
+  const masterPassword = $id('masterPassword').value;
+  if(!username || !specificText || !masterPassword){
+    showMessage($id('regErr'), "Please fill all fields.");
+    return;
+  }
+  try{
+    await registerUser(username, specificText, masterPassword);
+  }catch(e){
+    // error shown inside registerUser
   }
 });
 
-// Prefill login if user exists
-const savedUser=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
-if(savedUser.username){tabs.forEach(t=>t.classList.remove('active'));document.querySelector('[data-tab="login"]').classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById('login').classList.add('active');document.getElementById('loginUsername').value=savedUser.username;}
+$id('copyBtn').addEventListener('click', ()=>{
+  const txt = $id('passwordDisplay').textContent.trim();
+  if(!txt || txt.includes("Your 8-character")) return alert("No code to copy");
+  navigator.clipboard?.writeText(txt).then(()=>alert('Copied to clipboard')).catch(()=>{ alert('Could not copy'); });
+});
+
+$id('downloadBtn').addEventListener('click', ()=>{
+  const saved = JSON.parse(localStorage.getItem('adRevenueUser')||"{}");
+  if(!saved || !saved.accessCode) return alert("No saved details. Generate first.");
+  const content = `AdRevenuePro Account\nUsername: ${saved.username}\nCampaign: ${saved.specificText}\nAccessCode: ${saved.accessCode}\nGistURL: ${saved.gistUrl || ""}\n`;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `adrevenue-${saved.username}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+$id('loginBtn').addEventListener('click', ()=>{
+  const username = $id('loginUsername').value.trim();
+  const specificText = $id('loginSpecificText').value.trim();
+  const masterPassword = $id('loginMasterPassword').value;
+  if(!username || !specificText || !masterPassword){
+    showMessage($id('loginErr'), "Please fill all fields.");
+    return;
+  }
+  loginUser(username, specificText, masterPassword);
+});
+
+/* On load: if we have stored user, switch to login tab and prefill */
+(function init(){
+  const saved = JSON.parse(localStorage.getItem('adRevenueUser')||"{}");
+  if(saved && saved.username){
+    // switch to login
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    const t = document.querySelector('.tab[data-tab="login"]');
+    t.classList.add('active');
+    document.getElementById('login').classList.add('active');
+    $id('loginUsername').value = saved.username || "";
+    $id('loginSpecificText').value = saved.specificText || "";
+    $id('passwordDisplay').textContent = saved.accessCode || "Your 8-character access code will appear here";
+  }
+})();
 </script>
 </body>
 </html>
