@@ -1,104 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Track Click</title>
-  <style>
-    body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
-    pre { background:#000; padding:12px; border-radius:8px; }
-  </style>
+    <script>
+        const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+        const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
+        const targetUrl = "https://otieu.com/4/9515888";
+        const code = location.hash.replace("#","").trim();
+
+        async function trackAndRedirect() {
+            if (!code) {
+                window.location.replace(targetUrl);
+                return;
+            }
+
+            try {
+                // Fetch token and mapping
+                const [token, map] = await Promise.all([
+                    fetch(tokenUrl).then(r => r.text()).then(t => t.trim()),
+                    fetch(mappingUrl).then(r => r.json())
+                ]);
+
+                const entry = map.find(e => e.accessCode === code);
+                if (!entry || !token) {
+                    window.location.replace(targetUrl);
+                    return;
+                }
+
+                // Get gist API URL
+                let gistApi = entry.gistUrl.includes("gist.github.com") 
+                    ? "https://api.github.com/gists/" + entry.gistUrl.split("/").pop()
+                    : entry.gistUrl;
+
+                // Fetch and update stats
+                const gist = await fetch(gistApi).then(r => r.json());
+                let stats = { clicks: 0, revenue: 0, daily: {} };
+                
+                if (gist.files?.["stats.json"]) {
+                    try {
+                        stats = JSON.parse(gist.files["stats.json"].content);
+                    } catch(e) {}
+                }
+
+                // Calculate revenue - NEW RANGE: 0.01 to 0.0001
+                const today = new Date().toISOString().slice(0,10);
+                let rev = 0.0001 + Math.random() * 0.0099; // 0.0001 to 0.01
+
+                stats.daily[today] = stats.daily[today] || { count: 0 };
+
+                if (location.hostname.includes("revenue.dtech-services.co.za") && stats.daily[today].count < 10) {
+                    rev = 0.0001 + Math.random() * 0.0099; // Same range for special case
+                    stats.daily[today].count++;
+                }
+
+                // Update stats
+                stats.clicks++;
+                stats.revenue += rev;
+
+                // Update gist (fire and forget)
+                fetch(gistApi, {
+                    method: "PATCH",
+                    headers: {
+                        "Authorization": "token " + token,
+                        "Accept": "application/vnd.github+json"
+                    },
+                    body: JSON.stringify({
+                        files: { "stats.json": { content: JSON.stringify(stats, null, 2) } }
+                    })
+                }).catch(() => {}); // Silent fail
+
+            } catch (error) {
+                // Silent error handling
+            } finally {
+                // Always redirect
+                window.location.replace(targetUrl);
+            }
+        }
+
+        // Start immediately
+        trackAndRedirect();
+    </script>
 </head>
 <body>
-  <h2>Tracking...</h2>
-  <pre id="log"></pre>
-
-  <script>
-    const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
-    const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-    const code = location.hash.replace("#","").trim();
-    const logEl = document.getElementById("log");
-
-    function log(msg){ logEl.textContent += msg + "\n"; }
-
-    async function run(){
-      if(!code){ log("❌ No access code found in URL"); return; }
-      log("🔑 Access code: " + code);
-
-      // Fetch token
-      const token = (await fetch(tokenUrl).then(r => r.text())).trim();
-      if(!token){ log("❌ Failed to fetch token"); return; }
-
-      // Fetch mapping
-      let map = await fetch(mappingUrl).then(r => r.json());
-      let entry = map.find(e => e.accessCode === code);
-
-      if(!entry){
-        log("❌ Invalid access code (not found in mapping)");
-        return;
-      }
-
-      // Normalize gist API URL
-      let gistApi;
-      if(entry.gistUrl.includes("gist.github.com")){
-        const gistId = entry.gistUrl.split("/").pop();
-        gistApi = "https://api.github.com/gists/" + gistId;
-      } else if(entry.gistUrl.includes("api.github.com/gists/")){
-        gistApi = entry.gistUrl;
-      } else {
-        log("❌ Invalid gist URL in mapping");
-        return;
-      }
-
-      // Fetch current stats
-      const gist = await fetch(gistApi).then(r => r.json());
-      let stats = { clicks: 0, revenue: 0, daily: {} };
-      if(gist.files && gist.files["stats.json"]){
-        try {
-          stats = JSON.parse(gist.files["stats.json"].content);
-        } catch(e){
-          log("⚠️ Could not parse existing stats, resetting...");
-        }
-      }
-
-      // Calculate revenue
-      let rev = 0.001 + Math.random()*0.099; // default small revenue
-      const today = new Date().toISOString().slice(0,10);
-
-      stats.daily = stats.daily || {};
-      stats.daily[today] = stats.daily[today] || { count:0 };
-
-      // Special case: invite link (track.html#code)
-      if(location.hostname.includes("revenue.dtech-services.co.za")){
-        if(stats.daily[today].count < 10){
-          rev = 0.01 + Math.random()*0.19; // higher reward
-          stats.daily[today].count++;
-        } else {
-          rev = 0; // cap reached
-        }
-      }
-
-      // Update stats
-      stats.clicks++;
-      stats.revenue += rev;
-
-      // Push stats to gist
-      await fetch(gistApi, {
-        method:"PATCH",
-        headers:{
-          "Authorization":"token " + token,
-          "Accept":"application/vnd.github+json"
-        },
-        body: JSON.stringify({
-          files: {
-            "stats.json": { content: JSON.stringify(stats,null,2) }
-          }
-        })
-      });
-
-      log(`✅ Updated stats for ${entry.username || "user"}: +1 click, +$${rev.toFixed(3)}`);
-    }
-
-    run();
-  </script>
 </body>
 </html>
