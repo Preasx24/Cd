@@ -5,7 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AdRevenuePro - Secure Login</title>
 <style>
-/* Styles same as before, omitted for brevity */
+* {margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
+body {background:linear-gradient(135deg, #0f2027, #203a43, #2c5364);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;}
+.container {width:100%;max-width:500px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);border-radius:15px;box-shadow:0 15px 35px rgba(0,0,0,0.5);padding:40px 30px;border:1px solid rgba(255,255,255,0.1);position:relative;overflow:hidden;}
+.container::before {content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);z-index:-1;}
+.header {text-align:center;margin-bottom:30px;}
+.logo {font-size:36px;margin-bottom:10px;color:#4facfe;}
+.title {font-size:28px;font-weight:600;margin-bottom:10px;color:white;}
+.subtitle {color:rgba(255,255,255,0.7);font-size:16px;}
+.tabs {display:flex;margin-bottom:25px;border-bottom:1px solid rgba(255,255,255,0.1);}
+.tab {padding:12px 20px;color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.3s ease;border-bottom:3px solid transparent;}
+.tab.active {color:#4facfe;border-bottom:3px solid #4facfe;}
+.tab-content {display:none;}
+.tab-content.active {display:block;}
+.form-group {margin-bottom:20px;}
+.form-label {display:block;color:rgba(255,255,255,0.9);margin-bottom:8px;font-size:14px;font-weight:500;}
+.form-input {width:100%;padding:15px 20px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:16px;transition:all 0.3s ease;}
+.form-input:focus {outline:none;border-color:#4facfe;box-shadow:0 0 0 2px rgba(79,172,254,0.2);}
+.input-hint {color:rgba(255,255,255,0.6);font-size:12px;margin-top:5px;display:block;}
+.btn {width:100%;padding:15px;background:linear-gradient(45deg, #4facfe, #00f2fe);border:none;border-radius:8px;color:white;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;box-shadow:0 5px 15px rgba(0,242,254,0.3);margin-top:10px;}
+.btn:hover {transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,242,254,0.4);}
+.password-display {background:rgba(0,0,0,0.2);border-radius:8px;padding:15px;margin:15px 0;word-break:break-all;color:#4facfe;font-family:monospace;font-size:18px;text-align:center;border:1px dashed rgba(79,172,254,0.3);min-height:60px;display:flex;align-items:center;justify-content:center;}
+.action-buttons {display:flex;gap:10px;margin-top:15px;}
+.action-btn {flex:1;padding:10px;background:rgba(255,255,255,0.1);border:none;border-radius:5px;color:white;cursor:pointer;transition:all 0.3s ease;}
+.action-btn:hover {background:rgba(255,255,255,0.2);}
+.success-message {color:#4facfe;font-size:14px;margin-top:10px;text-align:center;display:none;padding:10px;background:rgba(79,172,254,0.1);border-radius:5px;}
+.error-message {color:#ff6b6b;font-size:14px;margin-top:10px;text-align:center;display:none;padding:10px;background:rgba(255,107,107,0.1);border-radius:5px;}
+@keyframes pulse {0% {transform:scale(1);}50% {transform:scale(1.05);}100% {transform:scale(1);}}
+.pulse {animation:pulse 2s infinite;}
 </style>
 </head>
 <body>
@@ -64,7 +91,7 @@
 // Tab switching
 const tabs=document.querySelectorAll('.tab');
 const tabContents=document.querySelectorAll('.tab-content');
-tabs.forEach(tab=>{tab.addEventListener('click',()=>{const tabId=tab.getAttribute('data-tab');tabs.forEach(t=>t.classList.remove('active'));tab.classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById(tabId).classList.add('active');});});
+tabs.forEach(tab=>tab.addEventListener('click',()=>{const tabId=tab.getAttribute('data-tab');tabs.forEach(t=>t.classList.remove('active'));tab.classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById(tabId).classList.add('active');}));
 
 // Access code generator
 function generateAccessCode(username,specificText,masterPassword){
@@ -78,7 +105,7 @@ function generateAccessCode(username,specificText,masterPassword){
   return code;
 }
 
-// Create user gist & update mapping
+// Create or update user gist mapping
 async function createUserGist(userData){
   const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
   const mappingGistApi="https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08";
@@ -87,7 +114,6 @@ async function createUserGist(userData){
 
   let entry=map.find(e=>e.accessCode===userData.accessCode);
   if(!entry){
-    // Create new gist for user stats
     const newGistResp=await fetch("https://api.github.com/gists",{
       method:"POST",
       headers:{"Authorization":"token "+token.trim(),"Accept":"application/vnd.github+json"},
@@ -95,8 +121,6 @@ async function createUserGist(userData){
     });
     const newGist=await newGistResp.json();
     userData.gistUrl=newGist.html_url;
-
-    // Update mapping
     map.push({username:userData.username,accessCode:userData.accessCode,gistUrl:userData.gistUrl});
     await fetch(mappingGistApi,{
       method:"PATCH",
@@ -110,20 +134,16 @@ async function createUserGist(userData){
   return userData;
 }
 
-// Handle registration
+// Registration
 document.getElementById('generateBtn').addEventListener('click',async ()=>{
   const username=document.getElementById('username').value.trim();
   const specificText=document.getElementById('specificText').value.trim();
   const masterPassword=document.getElementById('masterPassword').value;
-
   if(!username||!specificText||!masterPassword){alert('Fill all fields'); return;}
-
   const accessCode=generateAccessCode(username,specificText,masterPassword);
   document.getElementById('passwordDisplay').textContent=accessCode;
-
   let userData={username,specificText,accessCode};
   userData=await createUserGist(userData);
-
   document.getElementById('regSuccessMessage').style.display='block';
   document.getElementById('loginUsername').value=username;
 });
@@ -132,12 +152,11 @@ document.getElementById('generateBtn').addEventListener('click',async ()=>{
 document.getElementById('copyBtn').addEventListener('click',()=>{const code=document.getElementById('passwordDisplay').textContent;if(code){navigator.clipboard.writeText(code).then(()=>alert('Copied!'));}});
 document.getElementById('downloadBtn').addEventListener('click',()=>{const u=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");if(u.accessCode){const blob=new Blob([`Username: ${u.username}\nCampaign: ${u.specificText}\nAccess Code: ${u.accessCode}\n`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`adrevenue-${u.username}.txt`;document.body.appendChild(a);a.click();document.body.removeChild(a);}});
 
-// Handle login
+// Login
 document.getElementById('loginBtn').addEventListener('click',()=>{
   const username=document.getElementById('loginUsername').value.trim();
   const masterPassword=document.getElementById('loginMasterPassword').value;
   const stored=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
-
   if(username===stored.username && generateAccessCode(stored.username,stored.specificText,masterPassword)===stored.accessCode){
     document.getElementById('loginSuccessMessage').style.display='block';
     setTimeout(()=>window.location.href='stats.html',1500);
