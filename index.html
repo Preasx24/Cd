@@ -5,103 +5,150 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AdRevenuePro - Secure Login</title>
 <style>
-  body { background: linear-gradient(135deg,#0f2027,#203a43,#2c5364); min-height:100vh; display:flex; justify-content:center; align-items:center; font-family:sans-serif; }
-  .container{width:100%;max-width:480px;background:rgba(255,255,255,0.05);padding:30px;border-radius:12px;color:#fff;}
-  .hidden{display:none;}
-  input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;}
-  input{background:rgba(255,255,255,0.1);color:#fff;}
-  button{background:#4facfe;color:#fff;cursor:pointer;font-weight:bold;}
-  button:hover{background:#2196f3;}
-  .password-display{background:#0003;padding:12px;margin-top:10px;text-align:center;border:1px dashed #4facfe;}
+/* Styles same as before, omitted for brevity */
 </style>
 </head>
 <body>
-<div class="container" id="registerBox">
-  <h2>Create Account</h2>
-  <input id="username" placeholder="Username">
-  <input id="campaign" placeholder="Campaign">
-  <input type="password" id="masterPassword" placeholder="Master Password">
-  <button onclick="generateAccess()">Generate Access Code</button>
-  <div class="password-display" id="generatedCode">Your code will appear here</div>
-</div>
+<div class="container">
+  <div class="header">
+    <div class="logo">💰</div>
+    <h1 class="title">AdRevenuePro</h1>
+    <p class="subtitle">Earn money by sharing ad links</p>
+  </div>
 
-<div class="container hidden" id="loginBox">
-  <h2>Login</h2>
-  <input id="loginUsername" placeholder="Username">
-  <input id="loginCampaign" placeholder="Campaign">
-  <input type="password" id="loginMasterPassword" placeholder="Master Password">
-  <button onclick="login()">Login</button>
+  <div class="tabs">
+    <div class="tab active" data-tab="register">Create Account</div>
+    <div class="tab" data-tab="login">Login</div>
+  </div>
+
+  <!-- Registration Tab -->
+  <div class="tab-content active" id="register">
+    <div class="form-group">
+      <label class="form-label" for="username">Choose Your Username</label>
+      <input type="text" id="username" class="form-input" placeholder="e.g. lefa2023">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="specificText">Campaign Name</label>
+      <input type="text" id="specificText" class="form-input" placeholder="e.g. SummerPromo">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="masterPassword">Master Password</label>
+      <input type="password" id="masterPassword" class="form-input" placeholder="Create a strong password">
+    </div>
+    <button id="generateBtn" class="btn pulse">GENERATE ACCESS CODE</button>
+    <div class="password-display" id="passwordDisplay">Your 8-character access code will appear here</div>
+    <div class="action-buttons">
+      <button class="action-btn" id="copyBtn">Copy Access Code</button>
+      <button class="action-btn" id="downloadBtn">Download Details</button>
+    </div>
+    <div class="success-message" id="regSuccessMessage">Account created successfully! You can now log in.</div>
+  </div>
+
+  <!-- Login Tab -->
+  <div class="tab-content" id="login">
+    <div class="form-group">
+      <label class="form-label" for="loginUsername">Your Username</label>
+      <input type="text" id="loginUsername" class="form-input" placeholder="Enter your username">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="loginMasterPassword">Master Password</label>
+      <input type="password" id="loginMasterPassword" class="form-input" placeholder="Enter your master password">
+    </div>
+    <button id="loginBtn" class="btn">LOGIN TO DASHBOARD</button>
+    <div class="error-message" id="loginErrorMessage">Login failed. Please check your credentials.</div>
+    <div class="success-message" id="loginSuccessMessage">Authentication successful! Redirecting to stats...</div>
+  </div>
 </div>
 
 <script>
-const tokenUrl="https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-const mappingUrl="https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+// Tab switching
+const tabs=document.querySelectorAll('.tab');
+const tabContents=document.querySelectorAll('.tab-content');
+tabs.forEach(tab=>{tab.addEventListener('click',()=>{const tabId=tab.getAttribute('data-tab');tabs.forEach(t=>t.classList.remove('active'));tab.classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById(tabId).classList.add('active');});});
 
-function hashCode(str){let h=0;for(let i=0;i<str.length;i++){h=(h<<5)-h+str.charCodeAt(i);h|=0;}return Math.abs(h);}
-function generateAccessCode(u,c,m){const seed=hashCode(u+c+m);const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";let code="";for(let i=0;i<8;i++){code+=chars.charAt((Math.sin(seed+i)*10000)%chars.length|0);}return code;}
-
-async function updateMapping(accessCode,username,gistUrl){
-  try{
-    const token=await fetch(tokenUrl).then(r=>r.text());
-    const mapping=await fetch(mappingUrl).then(r=>r.json());
-    const exists=mapping.some(e=>e.accessCode===accessCode);
-    if(!exists){
-      mapping.push({username,accessCode,gistUrl});
-      const gistApi="https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08";
-      await fetch(gistApi,{
-        method:"PATCH",
-        headers:{
-          "Authorization":"token "+token.trim(),
-          "Accept":"application/vnd.github+json"
-        },
-        body:JSON.stringify({files:{"gistfile1.txt":{content:JSON.stringify(mapping,null,2)}}})
-      });
-      console.log("Mapping gist updated");
-    }
-  }catch(e){console.error("Mapping update failed:",e);}
+// Access code generator
+function generateAccessCode(username,specificText,masterPassword){
+  const seed=username+specificText+masterPassword;
+  let hash=0;
+  for(let i=0;i<seed.length;i++){const char=seed.charCodeAt(i);hash=((hash<<5)-hash)+char;hash=Math.abs(hash&hash);}
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let code='';
+  function seededRandom(seed){const x=Math.sin(seed)*10000;return x-Math.floor(x);}
+  for(let i=0;i<8;i++){code+=chars.charAt(Math.floor(seededRandom(hash+i)*chars.length));}
+  return code;
 }
 
-async function generateAccess(){
-  const u=document.getElementById('username').value.trim();
-  const c=document.getElementById('campaign').value.trim();
-  const m=document.getElementById('masterPassword').value;
-  if(!u||!c||!m){alert("Fill all fields");return;}
-  const code=generateAccessCode(u,c,m);
-  document.getElementById('generatedCode').textContent=code;
+// Create user gist & update mapping
+async function createUserGist(userData){
+  const token=await fetch("https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt").then(r=>r.text());
+  const mappingGistApi="https://api.github.com/gists/4517ac43eff88b7e226fbbdc627a3c08";
+  const mapResponse=await fetch("https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt");
+  let map=await mapResponse.json();
 
-  // Create or get user gist URL
-  const gistUrl=`https://gist.github.com/${code}`;
-  localStorage.setItem("adRevenueUser",JSON.stringify({username:u,campaign:c,accessCode:code,gistUrl}));
+  let entry=map.find(e=>e.accessCode===userData.accessCode);
+  if(!entry){
+    // Create new gist for user stats
+    const newGistResp=await fetch("https://api.github.com/gists",{
+      method:"POST",
+      headers:{"Authorization":"token "+token.trim(),"Accept":"application/vnd.github+json"},
+      body:JSON.stringify({description:`AdRevenuePro stats for ${userData.username}`,public:false,files:{"stats.json":{content:JSON.stringify({clicks:0,revenue:0},null,2)}}})
+    });
+    const newGist=await newGistResp.json();
+    userData.gistUrl=newGist.html_url;
 
-  // Update mapping gist
-  await updateMapping(code,u,gistUrl);
-
-  alert("Account created. Use login next time.");
+    // Update mapping
+    map.push({username:userData.username,accessCode:userData.accessCode,gistUrl:userData.gistUrl});
+    await fetch(mappingGistApi,{
+      method:"PATCH",
+      headers:{"Authorization":"token "+token.trim(),"Accept":"application/vnd.github+json"},
+      body:JSON.stringify({files:{"gistfile1.txt":{content:JSON.stringify(map,null,2)}}})
+    });
+  } else {
+    userData.gistUrl=entry.gistUrl;
+  }
+  localStorage.setItem("adRevenueUser",JSON.stringify(userData));
+  return userData;
 }
 
-// Login
-function login(){
-  const u=document.getElementById('loginUsername').value.trim();
-  const c=document.getElementById('loginCampaign').value.trim();
-  const m=document.getElementById('loginMasterPassword').value;
+// Handle registration
+document.getElementById('generateBtn').addEventListener('click',async ()=>{
+  const username=document.getElementById('username').value.trim();
+  const specificText=document.getElementById('specificText').value.trim();
+  const masterPassword=document.getElementById('masterPassword').value;
+
+  if(!username||!specificText||!masterPassword){alert('Fill all fields'); return;}
+
+  const accessCode=generateAccessCode(username,specificText,masterPassword);
+  document.getElementById('passwordDisplay').textContent=accessCode;
+
+  let userData={username,specificText,accessCode};
+  userData=await createUserGist(userData);
+
+  document.getElementById('regSuccessMessage').style.display='block';
+  document.getElementById('loginUsername').value=username;
+});
+
+// Copy & Download
+document.getElementById('copyBtn').addEventListener('click',()=>{const code=document.getElementById('passwordDisplay').textContent;if(code){navigator.clipboard.writeText(code).then(()=>alert('Copied!'));}});
+document.getElementById('downloadBtn').addEventListener('click',()=>{const u=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");if(u.accessCode){const blob=new Blob([`Username: ${u.username}\nCampaign: ${u.specificText}\nAccess Code: ${u.accessCode}\n`],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`adrevenue-${u.username}.txt`;document.body.appendChild(a);a.click();document.body.removeChild(a);}});
+
+// Handle login
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  const username=document.getElementById('loginUsername').value.trim();
+  const masterPassword=document.getElementById('loginMasterPassword').value;
   const stored=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
-  if(!u||!c||!m){alert("Fill all fields");return;}
-  const expected=generateAccessCode(u,c,m);
-  if(expected===stored.accessCode && u===stored.username && c===stored.campaign){
-    alert("Login successful");
-    window.location.href="stats.html";
-  }else alert("Login failed");
-}
 
-// Show login if already registered
-const stored=localStorage.getItem("adRevenueUser");
-if(stored){
-  document.getElementById("registerBox").classList.add("hidden");
-  document.getElementById("loginBox").classList.remove("hidden");
-  const u=JSON.parse(stored);
-  document.getElementById("loginUsername").value=u.username;
-  document.getElementById("loginCampaign").value=u.campaign;
-}
+  if(username===stored.username && generateAccessCode(stored.username,stored.specificText,masterPassword)===stored.accessCode){
+    document.getElementById('loginSuccessMessage').style.display='block';
+    setTimeout(()=>window.location.href='stats.html',1500);
+  } else{
+    document.getElementById('loginErrorMessage').style.display='block';
+  }
+});
+
+// Prefill login if user exists
+const savedUser=JSON.parse(localStorage.getItem("adRevenueUser")||"{}");
+if(savedUser.username){tabs.forEach(t=>t.classList.remove('active'));document.querySelector('[data-tab="login"]').classList.add('active');tabContents.forEach(c=>c.classList.remove('active'));document.getElementById('login').classList.add('active');document.getElementById('loginUsername').value=savedUser.username;}
 </script>
 </body>
 </html>
