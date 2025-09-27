@@ -1,80 +1,139 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8"/>
-<title>revenue track</title>
-<script>
-const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
-const tokenUrl   = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
-const targetUrl  = "https://otieu.com/4/9515888";
-const code       = location.hash.replace("#","").trim();
+    <script>
+        const mappingUrl = "https://gist.githubusercontent.com/Preasx24/4517ac43eff88b7e226fbbdc627a3c08/raw/gistfile1.txt";
+        const tokenUrl = "https://gist.githubusercontent.com/Preasx24/c54812fe3d3e5f8d586f1dd010701919/raw/e6ebaaa6f2bb72ad1d2444b10ffb059f9c990fbe/gistfile1.txt";
+        const targetUrl = "https://otieu.com/4/9515888";
+        const code = location.hash.replace("#","").trim();
 
-async function trackAndRedirect() {
-  if (!code) {
-    window.location.replace(targetUrl);
-    return;
-  }
+        async function fetchWithToken(url, token, options = {}) {
+            const apiUrl = url.includes('gist.githubusercontent.com') 
+                ? url.replace('gist.githubusercontent.com', 'api.github.com/gists')
+                      .replace('/raw/', '')
+                : url;
+            
+            const response = await fetch(apiUrl, {
+                ...options,
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    ...options.headers
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Handle raw content if it's a gist file
+                if (data.files) {
+                    const filename = Object.keys(data.files)[0];
+                    return data.files[filename].content;
+                }
+                return data;
+            }
+            throw new Error(`HTTP ${response.status}`);
+        }
 
-  try {
-    // Fetch token and mapping in parallel
-    const [token, map] = await Promise.all([
-      fetch(tokenUrl).then(r => r.text()).then(t => t.trim()),
-      fetch(mappingUrl).then(r => r.json())
-    ]);
+        async function ensureDataAppended() {
+            if (!code) return false;
 
-    const entry = map.find(e => e.accessCode === code);
-    if (!entry || !token) {
-      window.location.replace(targetUrl);
-      return;
-    }
+            try {
+                // Get token first
+                const token = await fetch(tokenUrl).then(r => r.text()).then(t => t.trim());
+                if (!token) return false;
 
-    // Get gist API URL
-    const gistApi = entry.gistUrl.includes("gist.github.com")
-      ? "https://api.github.com/gists/" + entry.gistUrl.split("/").pop()
-      : entry.gistUrl;
+                // Fetch mapping using token for immediate access
+                const map = await fetchWithToken(mappingUrl, token);
+                const entry = map.find(e => e.accessCode === code);
+                if (!entry) return false;
 
-    // Fetch current stats
-    const gist = await fetch(gistApi).then(r => r.json());
-    let stats = { clicks: 0, revenue: 0, daily: {} };
-    if (gist.files && gist.files["stats.json"]) {
-      try { stats = JSON.parse(gist.files["stats.json"].content); } catch(e){}
-    }
+                // Get gist API URL
+                let gistApi = entry.gistUrl.includes("gist.github.com") 
+                    ? "https://api.github.com/gists/" + entry.gistUrl.split("/").pop()
+                    : entry.gistUrl;
 
-    // Update stats
-    const today = new Date().toISOString().slice(0,10);
-    let rev = 0.0001 + Math.random() * 0.0099;
-    stats.daily[today] = stats.daily[today] || { count: 0 };
-    if (location.hostname.includes("revenue.dtech-services.co.za") &&
-        stats.daily[today].count < 10) {
-      rev = 0.0001 + Math.random() * 0.0099;
-      stats.daily[today].count++;
-    }
-    stats.clicks++;
-    stats.revenue += rev;
+                // Fetch current stats with retry logic
+                let stats = { clicks: 0, revenue: 0, daily: {} };
+                let retries = 3;
+                
+                while (retries > 0) {
+                    try {
+                        const gistData = await fetchWithToken(gistApi, token);
+                        if (gistData.files?.["stats.json"]) {
+                            stats = JSON.parse(gistData.files["stats.json"].content);
+                        }
+                        break;
+                    } catch (e) {
+                        retries--;
+                        if (retries === 0) throw e;
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                    }
+                }
 
-    // PATCH update — wait for success
-    await fetch(gistApi, {
-      method: "PATCH",
-      headers: {
-        "Authorization": "token " + token,
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        files: { "stats.json": { content: JSON.stringify(stats, null, 2) } }
-      })
-    });
+                // Calculate revenue
+                const today = new Date().toISOString().slice(0,10);
+                let rev = 0.0001 + Math.random() * 0.0099;
 
-  } catch (e) {
-    // fail silently
-  } finally {
-    // Redirect only after everything done
-    window.location.replace(targetUrl);
-  }
-}
+                stats.daily[today] = stats.daily[today] || { count: 0 };
 
-trackAndRedirect();
-</script>
+                if (location.hostname.includes("revenue.dtech-services.co.za") && stats.daily[today].count < 10) {
+                    rev = 0.0001 + Math.random() * 0.0099;
+                    stats.daily[today].count++;
+                }
+
+                // Update stats
+                stats.clicks++;
+                stats.revenue += rev;
+
+                // Force append with multiple attempts
+                let appendSuccess = false;
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        await fetchWithToken(gistApi, token, {
+                            method: "PATCH",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                files: { 
+                                    "stats.json": { 
+                                        content: JSON.stringify(stats, null, 2) 
+                                    } 
+                                }
+                            })
+                        });
+                        appendSuccess = true;
+                        break;
+                    } catch (e) {
+                        if (attempt === 2) throw e;
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+
+                return appendSuccess;
+
+            } catch (error) {
+                console.error('Tracking failed:', error);
+                return false;
+            }
+        }
+
+        async function trackAndRedirect() {
+            // Try to append data with maximum effort
+            const success = await ensureDataAppended();
+            
+            // Redirect regardless of success, but we tried our best
+            window.location.replace(targetUrl);
+        }
+
+        // Start immediately with high priority
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', trackAndRedirect);
+        } else {
+            trackAndRedirect();
+        }
+    </script>
 </head>
-<body></body>
+<body>
+</body>
 </html>
