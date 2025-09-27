@@ -356,6 +356,30 @@
             margin: 0 auto 15px;
         }
 
+        .amount-validation {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .validation-error {
+            color: var(--error);
+        }
+
+        .validation-success {
+            color: var(--success);
+        }
+
+        .card-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .card-input-group .form-group {
+            margin-bottom: 0;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -372,6 +396,10 @@
             
             .converter-controls {
                 flex-direction: column;
+            }
+            
+            .card-input-group {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -392,7 +420,6 @@
             <div class="balance-display">
                 <div class="balance-label">Available for withdrawal</div>
                 <div class="balance-amount" id="balanceAmount">$0.00</div>
-                <div class="balance-label" id="gistUrl"></div>
             </div>
             
             <div class="withdrawal-info">
@@ -439,10 +466,10 @@
                     <div class="option-desc">Instant transfer, 2.9% fee</div>
                 </div>
                 
-                <div class="withdrawal-option" data-method="bank">
-                    <div class="option-icon">🏦</div>
-                    <div class="option-name">Bank Transfer</div>
-                    <div class="option-desc">3-5 business days, $5 fee</div>
+                <div class="withdrawal-option" data-method="card">
+                    <div class="option-icon">💳</div>
+                    <div class="option-name">Debit/Credit Card</div>
+                    <div class="option-desc">Direct to card, 3.5% fee</div>
                 </div>
                 
                 <div class="withdrawal-option" data-method="crypto">
@@ -451,10 +478,10 @@
                     <div class="option-desc">Bitcoin, Ethereum, 1% fee</div>
                 </div>
                 
-                <div class="withdrawal-option" data-method="skrill">
-                    <div class="option-icon">💳</div>
-                    <div class="option-name">Skrill</div>
-                    <div class="option-desc">E-wallet, 2.5% fee</div>
+                <div class="withdrawal-option" data-method="bank">
+                    <div class="option-icon">🏦</div>
+                    <div class="option-name">Bank Transfer</div>
+                    <div class="option-desc">3-5 business days, $5 fee</div>
                 </div>
             </div>
             
@@ -466,27 +493,39 @@
                 </div>
                 <div class="form-group">
                     <label for="paypalAmount">Amount to Withdraw (USD)</label>
-                    <input type="number" id="paypalAmount" placeholder="25.00" step="0.01" min="25">
+                    <input type="number" id="paypalAmount" placeholder="25.00" step="0.01" min="0">
+                    <div class="amount-validation" id="paypalValidation"></div>
                 </div>
-                <button class="btn btn-primary" id="paypalSubmit">Request Withdrawal</button>
+                <button class="btn btn-primary" id="paypalSubmit" disabled>Request Withdrawal</button>
                 <button class="btn btn-secondary withdrawal-back">Back to Methods</button>
             </div>
             
-            <div id="bankForm" class="withdrawal-form">
-                <h3>Bank Transfer</h3>
+            <div id="cardForm" class="withdrawal-form">
+                <h3>Debit/Credit Card Withdrawal</h3>
                 <div class="form-group">
-                    <label for="bankAccount">Account Number</label>
-                    <input type="text" id="bankAccount" placeholder="Enter your account number">
+                    <label for="cardNumber">Card Number</label>
+                    <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                </div>
+                <div class="card-input-group">
+                    <div class="form-group">
+                        <label for="cardExpiry">Expiry Date</label>
+                        <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="cardCVC">CVC</label>
+                        <input type="text" id="cardCVC" placeholder="123" maxlength="4">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="bankRouting">Routing Number (US) / Sort Code (UK)</label>
-                    <input type="text" id="bankRouting" placeholder="Enter routing number">
+                    <label for="cardHolder">Cardholder Name</label>
+                    <input type="text" id="cardHolder" placeholder="John Doe">
                 </div>
                 <div class="form-group">
-                    <label for="bankAmount">Amount to Withdraw (USD)</label>
-                    <input type="number" id="bankAmount" placeholder="25.00" step="0.01" min="25">
+                    <label for="cardAmount">Amount to Withdraw (USD)</label>
+                    <input type="number" id="cardAmount" placeholder="25.00" step="0.01" min="0">
+                    <div class="amount-validation" id="cardValidation"></div>
                 </div>
-                <button class="btn btn-primary" id="bankSubmit">Request Withdrawal</button>
+                <button class="btn btn-primary" id="cardSubmit" disabled>Request Withdrawal</button>
                 <button class="btn btn-secondary withdrawal-back">Back to Methods</button>
             </div>
             
@@ -507,23 +546,29 @@
                 </div>
                 <div class="form-group">
                     <label for="cryptoAmount">Amount to Withdraw (USD)</label>
-                    <input type="number" id="cryptoAmount" placeholder="25.00" step="0.01" min="25">
+                    <input type="number" id="cryptoAmount" placeholder="25.00" step="0.01" min="0">
+                    <div class="amount-validation" id="cryptoValidation"></div>
                 </div>
-                <button class="btn btn-primary" id="cryptoSubmit">Request Withdrawal</button>
+                <button class="btn btn-primary" id="cryptoSubmit" disabled>Request Withdrawal</button>
                 <button class="btn btn-secondary withdrawal-back">Back to Methods</button>
             </div>
             
-            <div id="skrillForm" class="withdrawal-form">
-                <h3>Skrill Withdrawal</h3>
+            <div id="bankForm" class="withdrawal-form">
+                <h3>Bank Transfer</h3>
                 <div class="form-group">
-                    <label for="skrillEmail">Skrill Email Address</label>
-                    <input type="email" id="skrillEmail" placeholder="your.email@example.com">
+                    <label for="bankAccount">Account Number</label>
+                    <input type="text" id="bankAccount" placeholder="Enter your account number">
                 </div>
                 <div class="form-group">
-                    <label for="skrillAmount">Amount to Withdraw (USD)</label>
-                    <input type="number" id="skrillAmount" placeholder="25.00" step="0.01" min="25">
+                    <label for="bankRouting">Routing Number (US) / Sort Code (UK) / BSB (AU)</label>
+                    <input type="text" id="bankRouting" placeholder="Enter routing number">
                 </div>
-                <button class="btn btn-primary" id="skrillSubmit">Request Withdrawal</button>
+                <div class="form-group">
+                    <label for="bankAmount">Amount to Withdraw (USD)</label>
+                    <input type="number" id="bankAmount" placeholder="25.00" step="0.01" min="0">
+                    <div class="amount-validation" id="bankValidation"></div>
+                </div>
+                <button class="btn btn-primary" id="bankSubmit" disabled>Request Withdrawal</button>
                 <button class="btn btn-secondary withdrawal-back">Back to Methods</button>
             </div>
         </div>
@@ -594,7 +639,6 @@
         
         // DOM elements
         const balanceAmountEl = document.getElementById('balanceAmount');
-        const gistUrlEl = document.getElementById('gistUrl');
         const usdAmountEl = document.getElementById('usdAmount');
         const currencySelectEl = document.getElementById('currencySelect');
         const convertedAmountEl = document.getElementById('convertedAmount');
@@ -623,9 +667,6 @@
                     showToast('User data not found', true);
                     return;
                 }
-                
-                // Display gist URL
-                gistUrlEl.textContent = `Data source: ${entry.gistUrl}`;
                 
                 // Normalize gist API URL
                 let gistApi;
@@ -678,9 +719,20 @@
             
             // Withdrawal form submissions
             document.getElementById('paypalSubmit').addEventListener('click', () => submitWithdrawal('paypal'));
-            document.getElementById('bankSubmit').addEventListener('click', () => submitWithdrawal('bank'));
+            document.getElementById('cardSubmit').addEventListener('click', () => submitWithdrawal('card'));
             document.getElementById('cryptoSubmit').addEventListener('click', () => submitWithdrawal('crypto'));
-            document.getElementById('skrillSubmit').addEventListener('click', () => submitWithdrawal('skrill'));
+            document.getElementById('bankSubmit').addEventListener('click', () => submitWithdrawal('bank'));
+            
+            // Amount validation for each form
+            document.getElementById('paypalAmount').addEventListener('input', () => validateAmount('paypal'));
+            document.getElementById('cardAmount').addEventListener('input', () => validateAmount('card'));
+            document.getElementById('cryptoAmount').addEventListener('input', () => validateAmount('crypto'));
+            document.getElementById('bankAmount').addEventListener('input', () => validateAmount('bank'));
+            
+            // Card number formatting
+            document.getElementById('cardNumber').addEventListener('input', formatCardNumber);
+            document.getElementById('cardExpiry').addEventListener('input', formatExpiryDate);
+            document.getElementById('cardCVC').addEventListener('input', formatCVC);
         }
         
         // Update currency conversion
@@ -717,6 +769,7 @@
             const amountField = document.getElementById(`${method}Amount`);
             if (amountField) {
                 amountField.value = userBalance >= WITHDRAWAL_MINIMUM ? userBalance.toFixed(2) : WITHDRAWAL_MINIMUM.toFixed(2);
+                validateAmount(method);
             }
         }
         
@@ -731,19 +784,53 @@
             });
         }
         
+        // Validate withdrawal amount
+        function validateAmount(method) {
+            const amountField = document.getElementById(`${method}Amount`);
+            const validationEl = document.getElementById(`${method}Validation`);
+            const submitBtn = document.getElementById(`${method}Submit`);
+            
+            if (!amountField || !validationEl || !submitBtn) return;
+            
+            const amount = parseFloat(amountField.value);
+            
+            // Reset validation message and button state
+            validationEl.textContent = '';
+            validationEl.className = 'amount-validation';
+            submitBtn.disabled = true;
+            
+            if (!amount || amount <= 0) {
+                validationEl.textContent = 'Please enter a valid amount';
+                validationEl.className = 'amount-validation validation-error';
+                return;
+            }
+            
+            if (amount > userBalance) {
+                validationEl.textContent = `Insufficient balance. Your available balance is $${userBalance.toFixed(2)}`;
+                validationEl.className = 'amount-validation validation-error';
+                return;
+            }
+            
+            if (amount < WITHDRAWAL_MINIMUM) {
+                validationEl.textContent = `Minimum withdrawal amount is $${WITHDRAWAL_MINIMUM.toFixed(2)}`;
+                validationEl.className = 'amount-validation validation-error';
+                return;
+            }
+            
+            // All validations passed
+            validationEl.textContent = `✅ You can withdraw $${amount.toFixed(2)}`;
+            validationEl.className = 'amount-validation validation-success';
+            submitBtn.disabled = false;
+        }
+        
         // Submit withdrawal request
         function submitWithdrawal(method) {
             const amountField = document.getElementById(`${method}Amount`);
             const amount = parseFloat(amountField.value);
             
-            // Validation
-            if (!amount || amount < WITHDRAWAL_MINIMUM) {
-                showToast(`Minimum withdrawal amount is $${WITHDRAWAL_MINIMUM}`, true);
-                return;
-            }
-            
-            if (amount > userBalance) {
-                showToast('Insufficient balance', true);
+            // Final validation
+            if (!amount || amount < WITHDRAWAL_MINIMUM || amount > userBalance) {
+                showToast('Invalid withdrawal amount', true);
                 return;
             }
             
@@ -760,12 +847,24 @@
                     }
                     break;
                     
-                case 'bank':
-                    const account = document.getElementById('bankAccount').value;
-                    const routing = document.getElementById('bankRouting').value;
-                    if (!account || !routing) {
+                case 'card':
+                    const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
+                    const expiry = document.getElementById('cardExpiry').value;
+                    const cvc = document.getElementById('cardCVC').value;
+                    const holder = document.getElementById('cardHolder').value;
+                    
+                    if (!isValidCardNumber(cardNumber)) {
                         valid = false;
-                        message = 'Please enter both account and routing numbers';
+                        message = 'Please enter a valid card number';
+                    } else if (!isValidExpiryDate(expiry)) {
+                        valid = false;
+                        message = 'Please enter a valid expiry date (MM/YY)';
+                    } else if (!isValidCVC(cvc)) {
+                        valid = false;
+                        message = 'Please enter a valid CVC';
+                    } else if (!holder.trim()) {
+                        valid = false;
+                        message = 'Please enter cardholder name';
                     }
                     break;
                     
@@ -777,11 +876,12 @@
                     }
                     break;
                     
-                case 'skrill':
-                    const skrillEmail = document.getElementById('skrillEmail').value;
-                    if (!skrillEmail || !isValidEmail(skrillEmail)) {
+                case 'bank':
+                    const account = document.getElementById('bankAccount').value;
+                    const routing = document.getElementById('bankRouting').value;
+                    if (!account || !routing) {
                         valid = false;
-                        message = 'Please enter a valid Skrill email';
+                        message = 'Please enter both account and routing numbers';
                     }
                     break;
             }
@@ -831,9 +931,9 @@
         function calculateFee(method, amount) {
             switch(method) {
                 case 'paypal': return amount * 0.029;
+                case 'card': return amount * 0.035;
                 case 'bank': return 5.00;
                 case 'crypto': return amount * 0.01;
-                case 'skrill': return amount * 0.025;
                 default: return 0;
             }
         }
@@ -888,6 +988,85 @@
         function isValidEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return re.test(email);
+        }
+        
+        // Validate card number using Luhn algorithm
+        function isValidCardNumber(cardNumber) {
+            // Remove spaces and check if it's a number
+            const cleaned = cardNumber.replace(/\s/g, '');
+            if (!/^\d+$/.test(cleaned)) return false;
+            
+            // Luhn algorithm
+            let sum = 0;
+            let isEven = false;
+            
+            for (let i = cleaned.length - 1; i >= 0; i--) {
+                let digit = parseInt(cleaned.charAt(i), 10);
+                
+                if (isEven) {
+                    digit *= 2;
+                    if (digit > 9) {
+                        digit -= 9;
+                    }
+                }
+                
+                sum += digit;
+                isEven = !isEven;
+            }
+            
+            return (sum % 10) === 0;
+        }
+        
+        // Validate expiry date (MM/YY format)
+        function isValidExpiryDate(expiry) {
+            if (!/^\d{2}\/\d{2}$/.test(expiry)) return false;
+            
+            const [month, year] = expiry.split('/').map(Number);
+            if (month < 1 || month > 12) return false;
+            
+            const currentYear = new Date().getFullYear() % 100;
+            const currentMonth = new Date().getMonth() + 1;
+            
+            if (year < currentYear) return false;
+            if (year === currentYear && month < currentMonth) return false;
+            
+            return true;
+        }
+        
+        // Validate CVC (3 or 4 digits)
+        function isValidCVC(cvc) {
+            return /^\d{3,4}$/.test(cvc);
+        }
+        
+        // Format card number with spaces
+        function formatCardNumber(e) {
+            let input = e.target.value.replace(/\s/g, '');
+            if (input.length > 16) input = input.substring(0, 16);
+            
+            let formatted = '';
+            for (let i = 0; i < input.length; i++) {
+                if (i > 0 && i % 4 === 0) formatted += ' ';
+                formatted += input[i];
+            }
+            
+            e.target.value = formatted;
+        }
+        
+        // Format expiry date as MM/YY
+        function formatExpiryDate(e) {
+            let input = e.target.value.replace(/\D/g, '');
+            if (input.length > 4) input = input.substring(0, 4);
+            
+            if (input.length >= 2) {
+                e.target.value = input.substring(0, 2) + '/' + input.substring(2);
+            } else {
+                e.target.value = input;
+            }
+        }
+        
+        // Format CVC (numbers only)
+        function formatCVC(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
         }
     </script>
 </body>
