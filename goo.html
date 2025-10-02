@@ -2,41 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Decrypt Story</title>
+<title>Encrypt Story</title>
 <style>
 body { font-family: Arial; margin: 20px; }
 input, button { margin: 0.5rem 0; padding: 0.5rem; }
-textarea { width: 100%; height: 200px; margin-top: 1rem; }
+textarea { width: 100%; height: 150px; margin-top: 1rem; }
 </style>
 </head>
 <body>
-<h2>Decrypt Your Story</h2>
+<h2>Encrypt Your Story</h2>
 
 <input type="file" id="fileInput" accept=".txt"><br>
 <input type="password" id="pass" placeholder="Enter passphrase"><br>
-<button id="decryptBtn">Decrypt</button>
+<button id="encryptBtn">Encrypt and Download</button>
 
-<h3>Decrypted Content:</h3>
+<h3>Encrypted Content:</h3>
 <textarea id="output" readonly></textarea>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
-document.getElementById('decryptBtn').addEventListener('click', () => {
+document.getElementById('encryptBtn').addEventListener('click', () => {
     const fileInput = document.getElementById('fileInput').files[0];
     const pass = document.getElementById('pass').value;
-    if (!fileInput) { alert("Choose an encrypted .txt file"); return; }
-    if (!pass) { alert("Enter the passphrase"); return; }
+    if (!fileInput) { alert("Choose a .txt file"); return; }
+    if (!pass) { alert("Enter a passphrase"); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        const encrypted = e.target.result.trim();
-        try {
-            const decrypted = CryptoJS.AES.decrypt(encrypted, pass).toString(CryptoJS.enc.Utf8);
-            if (!decrypted) throw 1;
-            document.getElementById('output').value = decrypted;
-        } catch(err) {
-            alert("Decryption failed. Wrong password or corrupted file.");
-        }
+        const text = e.target.result;
+        const encrypted = CryptoJS.AES.encrypt(text, pass).toString();
+        document.getElementById('output').value = encrypted;
+
+        // Download file with the same name as input
+        const downloadName = fileInput.name;
+
+        const blob = new Blob([encrypted], {type: 'text/plain'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = downloadName;
+        link.textContent = 'Download Encrypted File';
+        link.style.display = 'block';
+        document.body.appendChild(link);
     };
     reader.readAsText(fileInput);
 });
